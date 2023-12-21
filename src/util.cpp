@@ -14,7 +14,7 @@ util::ReadTextFile(const std::string& filepath, std::ios_base::openmode mode) {
     std::ifstream file(filepath, mode);
     if (file.fail()) {
         perror(filepath.c_str());
-        return {};
+        return std::nullopt;
     }
 
     std::string contents;

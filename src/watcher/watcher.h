@@ -5,43 +5,82 @@
 
 #include <filesystem>
 #include <functional>
+#include <ostream>
 
 namespace sdbox {
 
 class InotifyWatcher;
 
-enum class EventType { FileCreated, FileDeleted, FileChanged, FileRenamed };
+enum class EventType { FileCreated, FileDeleted, FileChanged, FileMoved };
+
+inline std::ostream& operator<<(std::ostream& stream, const EventType& type) {
+    using enum EventType;
+    switch (type) {
+    case FileCreated:
+        stream << "Created";
+        break;
+    case FileDeleted:
+        stream << "Deleted";
+        break;
+    case FileChanged:
+        stream << "Changed";
+        break;
+    case FileMoved:
+        stream << "Moved";
+        break;
+    }
+
+    return stream;
+}
 
 struct WatcherEvent {
     std::string name;
+    std::string oldName;
     EventType   type;
+    bool        isDir;
 };
 
-using FileCreatedCallback = std::function<void(const std::string&)>;
-using FileDeletedCallback = std::function<void(const std::string&)>;
-using FileChangedCallback = std::function<void(const std::string&)>;
-using FileRenamedCallback = std::function<void(const std::string&, const std::string&)>;
+inline std::ostream& operator<<(std::ostream& stream, const WatcherEvent& ev) {
+    stream << std::boolalpha;
+    stream << "File " << ev.type << '\n';
+    stream << "Name: " << ev.name << '\n';
+    if (ev.type == EventType::FileMoved)
+        stream << "Old Name: " << ev.oldName << '\n';
+    stream << "Is Dir: " << ev.isDir << '\n';
+
+    return stream;
+}
+
+using EventCallback = std::function<void(const WatcherEvent&)>;
+using ErrorCallback = std::function<void(const std::string&)>;
 
 class DirectoryWatcher {
 public:
     DirectoryWatcher(const std::filesystem::path& dirPath) : dirPath(dirPath) {}
-    ~DirectoryWatcher() = default;
+    virtual ~DirectoryWatcher() = default;
 
-    virtual bool init()  = 0;
+    virtual void init()  = 0;
     virtual void watch() = 0;
+    virtual void stop()  = 0;
 
-    void setFileCreatedCallback(FileCreatedCallback callback) { createdCallback = callback; }
-    void setFileDeletedCallback(FileDeletedCallback callback) { deletedCallback = callback; }
-    void setFileChangedCallback(FileChangedCallback callback) { changedCallback = callback; }
-    void setFileRenamedCallback(FileRenamedCallback callback) { renamedCallback = callback; }
+    void registerCallback(EventType type, EventCallback&& callback) {
+        callbacks.emplace(type, callback);
+    }
+
+    void registerErrorCallback(ErrorCallback&& callback) { errorCallback = callback; }
 
 protected:
+    void writeToErrorCallback(const std::string& errMsg) {
+        if (errorCallback)
+            errorCallback(errMsg);
+    }
+
+    bool hasCallback(EventType type) const { return callbacks.find(type) != callbacks.end(); }
+
     std::filesystem::path dirPath = "";
 
-    FileCreatedCallback createdCallback = nullptr;
-    FileDeletedCallback deletedCallback = nullptr;
-    FileChangedCallback changedCallback = nullptr;
-    FileRenamedCallback renamedCallback = nullptr;
+    ErrorCallback                      errorCallback = nullptr;
+    std::map<EventType, EventCallback> callbacks;
 };
 
 std::unique_ptr<DirectoryWatcher> CreateDirectoryWatcher(const std::filesystem::path& path);
