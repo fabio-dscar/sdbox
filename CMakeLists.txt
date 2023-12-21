@@ -27,11 +27,13 @@ target_include_directories(sdbox PUBLIC
   src
   ext  
   ${GLAD_INCLUDE_DIR}
+  ${SPDLOG_INCLUDE_DIR}
 )
 target_link_libraries(sdbox PRIVATE
   glad
   ${OPENGL_LIBRARIES}
   ${GLFW_LIBRARIES}
+  ${SPDLOG_LIBRARIES}
 )
 
 add_custom_command(TARGET sdbox POST_BUILD
