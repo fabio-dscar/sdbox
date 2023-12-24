@@ -20,7 +20,7 @@ static const std::filesystem::path ShaderFolder = "./glsl";
 class Shader {
 public:
     Shader(const std::string& name, ShaderType type, const std::string& src)
-        : name(name), source({src}), type(type) {
+        : name(name), source(src), type(type) {
         handleIncludes();
     }
 
@@ -66,6 +66,39 @@ std::unique_ptr<Program> CompileAndLinkProgram(
 std::string BuildDefinesBlock(std::span<std::string> defines);
 std::string GetShaderLog(unsigned int handle);
 std::string GetProgramError(unsigned int handle);
+
+enum class UniformType {
+
+};
+
+struct UniformInfo {
+    GLenum      type;
+    std::string name;
+    std::size_t size;
+    int         loc;
+};
+
+inline std::vector<UniformInfo> ExtractUniforms(const Program& prog) {
+    GLint count;
+    glGetProgramiv(prog.id(), GL_ACTIVE_UNIFORMS, &count);
+
+    std::vector<UniformInfo> uniformList;
+    uniformList.reserve(count);
+    for (int i = 0; i < count; ++i) {
+        GLint  size;
+        GLenum type;
+        GLchar name[256];
+
+        glGetActiveUniform(prog.id(), i, 256, NULL, &size, &type, name);
+        GLint loc = glGetUniformLocation(prog.id(), name);
+
+        // Exclude uniform block variables
+        if (loc != -1)
+            uniformList.emplace_back(type, name, size, loc);
+    }
+
+    return uniformList;
+}
 
 } // namespace sdbox
 

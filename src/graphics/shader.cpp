@@ -5,6 +5,8 @@
 
 #include <util.h>
 
+#include <check.h>
+
 using namespace sdbox;
 using namespace std::filesystem;
 
@@ -27,6 +29,11 @@ void Shader::handleIncludes() {
 
         processed.push_back(file);
     }
+}
+
+void extractUniforms() {
+    auto uni =
+        R"([ ]*uniform[ ]*(float|int|unsigned int|vec2|vec3|vec4|mat2|mat3|mat4)[ ]*([a-zA-Z]+[a-zA-Z\d]*)[ ]*;)";
 }
 
 void Shader::compile(const std::string& defines) {
