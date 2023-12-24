@@ -54,5 +54,41 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(spdlog)
 
+target_compile_options(spdlog PRIVATE "-DSPDLOG_LEVEL_NAMES={ \"TRACE\", \"DEBUG\", \"INFO\", \"WARN\", \"ERROR\", \"CRITICAL\", \"OFF\" }")
+
 set(SPDLOG_INCLUDE_DIR ${spdlog_SOURCE_DIR}/include PARENT_SCOPE)
 set(SPDLOG_LIBRARIES spdlog PARENT_SCOPE)
+
+# ---------------------------------------------------------------------------------------
+#     backward-cpp
+# ---------------------------------------------------------------------------------------
+FetchContent_Declare(backward
+    GIT_REPOSITORY https://github.com/bombela/backward-cpp
+    GIT_TAG        master  
+)
+
+FetchContent_MakeAvailable(backward)
+
+set(BACKWARD_INCLUDE_DIR ${backward_SOURCE_DIR} PARENT_SCOPE)
+set(BACKWARD_LIBRARIES Backward::Interface PARENT_SCOPE)
+
+# ---------------------------------------------------------------------------------------
+#     glm
+# ---------------------------------------------------------------------------------------
+set(BUILD_TESTING OFF CACHE BOOL " " FORCE)
+FetchContent_Declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG        586a402397dd35d66d7a079049856d1e2cbab300
+  FIND_PACKAGE_ARGS
+)
+
+FetchContent_MakeAvailable(glm)
+
+if (GLM_FOUND)
+  set(GLM_INCLUDE_DIR ${GLM_INCLUDE_DIRS} PARENT_SCOPE)
+  set(GLM_LIBRARIES ${GLM_LIBRARIES} PARENT_SCOPE)
+else()
+  set(GLM_INCLUDE_DIR ${glm_SOURCE_DIR} PARENT_SCOPE)
+  set(GLM_LIBRARIES glm PARENT_SCOPE)
+endif()

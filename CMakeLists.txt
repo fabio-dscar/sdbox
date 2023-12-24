@@ -13,8 +13,14 @@ endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ext)
 
 set(SDBOX_SOURCES
-  src/util.cpp
-  src/shader.cpp
+  src/app.cpp
+  src/util/util.cpp
+  src/util/log.cpp
+  src/util/thread.cpp
+  src/graphics/shader.cpp
+  src/graphics/graphics.cpp
+  src/graphics/buffer.cpp
+  src/graphics/ringbuffer.cpp
   src/watcher/watcher.cpp
   src/watcher/inotifywatcher.cpp
   ${GLAD_SOURCES}
@@ -25,15 +31,20 @@ target_compile_features(sdbox PUBLIC cxx_std_20)
 target_compile_definitions(sdbox PUBLIC "$<$<CONFIG:Debug>:DEBUG>")
 target_include_directories(sdbox PUBLIC
   src
+  src/watcher
+  src/util
+  src/graphics
   ext  
   ${GLAD_INCLUDE_DIR}
   ${SPDLOG_INCLUDE_DIR}
+  ${GLM_INCLUDE_DIR}
 )
 target_link_libraries(sdbox PRIVATE
   glad
   ${OPENGL_LIBRARIES}
   ${GLFW_LIBRARIES}
   ${SPDLOG_LIBRARIES}
+  ${BACKWARD_LIBRARIES}
 )
 
 add_custom_command(TARGET sdbox POST_BUILD
