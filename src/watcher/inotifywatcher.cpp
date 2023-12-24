@@ -1,8 +1,11 @@
 #include <watcher/inotifywatcher.h>
 
+#include <check.h>
+
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
+#include <util.h>
 
 using namespace sdbox;
 
@@ -39,7 +42,7 @@ void InotifyWatcher::cleanup() {
 void InotifyWatcher::init() {
     inotifyFd = inotify_init1(IN_NONBLOCK);
     if (inotifyFd == -1)
-        FATAL("Failed to initializze inotify. {}", strerror(errno));
+        FATAL("Failed to initialize inotify. {}", strerror(errno));
 
     if (pipe2(stopPipeFd.data(), O_NONBLOCK) == -1)
         FATAL("Failed to create stop pipe. {}", strerror(errno));

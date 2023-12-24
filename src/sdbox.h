@@ -13,15 +13,15 @@
 #include <filesystem>
 #include <map>
 
-#if defined(DEBUG)
-#define THROW_ERROR(...)                                                                 \
-    throw std::runtime_error(std::format("{} ({}): {}", std::string(__FILE__),           \
-                                         std::to_string(__LINE__),                       \
-                                         std::format(__VA_ARGS__)))
-#else
-#define THROW_ERROR(...) throw std::runtime_error(std::format(__VA_ARGS__))
-#endif
+#include <check.h>
 
-#define FATAL(...) THROW_ERROR(__VA_ARGS__)
+#if defined(DEBUG)
+    #define THROW_ERROR(...)                                                \
+        throw std::runtime_error(std::format(                               \
+            "{} ({}): {}", std::string(__FILE__), std::to_string(__LINE__), \
+            std::format(__VA_ARGS__)))
+#else
+    #define THROW_ERROR(...) throw std::runtime_error(std::format(__VA_ARGS__))
+#endif
 
 #endif // __SDBOX_H__
