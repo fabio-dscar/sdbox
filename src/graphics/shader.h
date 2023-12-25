@@ -19,14 +19,12 @@ static const std::filesystem::path ShaderFolder = "./glsl";
 
 class Shader {
 public:
-    Shader(const std::string& name, ShaderType type, const std::string& src)
-        : name(name), source(src), type(type) {
-        handleIncludes();
-    }
+    Shader(const std::string& name, ShaderType type, const std::string& src);
 
     unsigned int id() const { return handle; }
 
-    void compile(const std::string& defines = VerDirective);
+    bool compile(const std::string& defines = VerDirective);
+    bool isValid() const { return handle > 0; }
 
 private:
     void handleIncludes();
@@ -39,15 +37,15 @@ private:
 
 class Program {
 public:
-    explicit Program(const std::string& name) : name(name) {}
-
+    explicit Program(const std::string& name);
     ~Program();
 
     void addShader(const Shader& src);
 
     unsigned int id() const { return handle; }
 
-    void link();
+    bool link();
+    bool isValid() const { return handle > 0; }
     void cleanShaders();
 
 private:
@@ -56,8 +54,8 @@ private:
     unsigned int              handle = 0;
 };
 
-Shader LoadShaderFile(const std::string& filePath);
-Shader LoadShaderFile(ShaderType type, const std::string& filePath);
+std::unique_ptr<Shader> LoadShaderFile(const std::string& filePath);
+std::unique_ptr<Shader> LoadShaderFile(ShaderType type, const std::string& filePath);
 
 std::unique_ptr<Program> CompileAndLinkProgram(
     const std::string& name, std::span<std::string> sourceNames,
@@ -81,6 +79,8 @@ struct UniformInfo {
 inline std::vector<UniformInfo> ExtractUniforms(const Program& prog) {
     GLint count;
     glGetProgramiv(prog.id(), GL_ACTIVE_UNIFORMS, &count);
+
+    LOGI("Uniform Count: {}", count);
 
     std::vector<UniformInfo> uniformList;
     uniformList.reserve(count);

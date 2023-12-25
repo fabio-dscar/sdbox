@@ -31,15 +31,20 @@ void Shader::handleIncludes() {
     }
 }
 
-void extractUniforms() {
-    auto uni =
-        R"([ ]*uniform[ ]*(float|int|unsigned int|vec2|vec3|vec4|mat2|mat3|mat4)[ ]*([a-zA-Z]+[a-zA-Z\d]*)[ ]*;)";
-}
+Shader::Shader(const std::string& name, ShaderType type, const std::string& src)
+    : name(name), source(src), type(type) {
+    handleIncludes();
 
-void Shader::compile(const std::string& defines) {
     handle = glCreateShader(type);
     if (handle == 0)
-        FATAL("Could not create shader {}", name);
+        LOG_ERROR("Could not create shader {}", name);
+}
+
+bool Shader::compile(const std::string& defines) {
+    if (!isValid()) {
+        LOG_WARN("Trying to compile shader {} with invalid handle.", name);
+        return false;
+    }
 
     const char* sources[] = {defines.c_str(), source.c_str()};
     glShaderSource(handle, 2, sources, 0);
@@ -49,7 +54,18 @@ void Shader::compile(const std::string& defines) {
     glGetShaderiv(handle, GL_COMPILE_STATUS, &result);
     if (result != GL_TRUE) {
         std::string message = GetShaderLog(handle);
-        FATAL("Shader {} compilation log:\n{}", name, message);
+        LOG_ERROR("Shader {} compilation log:\n{}", name, message);
+        return false;
+    }
+
+    return true;
+}
+
+Program::Program(const std::string& name) : name(name) {
+    handle = glCreateProgram();
+    if (handle == 0) {
+        std::string message = GetProgramError(handle);
+        LOG_ERROR("Could not create program {}", name);
     }
 }
 
@@ -62,11 +78,10 @@ void Program::addShader(const Shader& src) {
     srcHandles.push_back(src.id());
 }
 
-void Program::link() {
-    handle = glCreateProgram();
-    if (handle == 0) {
-        std::string message = GetProgramError(handle);
-        FATAL("Could not create program {}", name);
+bool Program::link() {
+    if (!isValid()) {
+        LOG_WARN("Trying to link program {}, with invalid handle.", name);
+        return false;
     }
 
     for (GLuint sid : srcHandles)
@@ -81,12 +96,15 @@ void Program::link() {
             glDetachShader(handle, sid);
 
         std::string message = GetProgramError(handle);
-        FATAL("Program linking error: {}", message);
+        LOG_ERROR("Program linking error: {}", message);
+        return false;
     }
 
     // Detach shaders after successful linking
     for (GLuint sid : srcHandles)
         glDetachShader(handle, sid);
+
+    return true;
 }
 
 void Program::cleanShaders() {
@@ -115,7 +133,7 @@ std::string sdbox::GetProgramError(unsigned int handle) {
     return {log.get()};
 }
 
-Shader sdbox::LoadShaderFile(const std::string& fileName) {
+std::unique_ptr<Shader> sdbox::LoadShaderFile(const std::string& fileName) {
     ShaderType type = Fragment;
 
     // Deduce type from extension, if possible
@@ -130,13 +148,15 @@ Shader sdbox::LoadShaderFile(const std::string& fileName) {
     return LoadShaderFile(type, fileName);
 }
 
-Shader sdbox::LoadShaderFile(ShaderType type, const std::string& fileName) {
+std::unique_ptr<Shader> sdbox::LoadShaderFile(ShaderType type, const std::string& fileName) {
     auto filePath = ShaderFolder / fileName;
     auto source   = util::ReadTextFile(ShaderFolder / fileName, std::ios_base::in);
-    if (!source.has_value())
-        FATAL("Couldn't load shader file {}", filePath.string());
+    if (!source.has_value()) {
+        LOG_ERROR("Couldn't load shader file {}", filePath.string());
+        return nullptr;
+    }
 
-    return {filePath.filename(), type, source.value()};
+    return std::make_unique<Shader>(filePath.filename(), type, source.value());
 }
 
 std::string sdbox::BuildDefinesBlock(std::span<std::string> defines) {
@@ -157,12 +177,20 @@ std::unique_ptr<Program> sdbox::CompileAndLinkProgram(
     auto program = std::make_unique<Program>(name);
     auto defines = BuildDefinesBlock(definesList);
 
-    for (auto& fname : sourceNames) {
-        Shader s = LoadShaderFile(fname);
-        s.compile(defines);
-        program->addShader(s);
+    for (const auto& fname : sourceNames) {
+        auto sh = LoadShaderFile(fname);
+        if (!sh || !sh->isValid())
+            FATAL("Failed to load/create shader {}.", fname);
+
+        if (!sh->compile(defines))
+            FATAL("Failed to compile shader {}.", fname);
+
+        program->addShader(*sh);
     }
 
-    program->link();
+    if (!program->link())
+        FATAL("Couldn't link program {}.", name);
+
+    program->cleanShaders();
     return program;
 }
