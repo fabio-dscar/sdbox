@@ -64,6 +64,10 @@ public:
     virtual void stop()  = 0;
 
     void registerCallback(EventType type, EventCallback&& callback) {
+        callbacks.emplace(type, std::move(callback));
+    }
+
+    void registerCallback(EventType type, const EventCallback& callback) {
         callbacks.emplace(type, callback);
     }
 

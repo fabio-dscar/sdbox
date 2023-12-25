@@ -6,17 +6,35 @@
 #include <optional>
 #include <filesystem>
 
+#include <xxhash/xxhash.hpp>
+
 namespace sdbox {
 namespace util {
 
-using HashResult = unsigned long;
+using HashResult64  = std::uint64_t;
+using HashResult128 = xxh::uint128_t;
+
+using HashResult = HashResult128;
 
 // ------------------------------------------------------------------
 //     General IO
 // ------------------------------------------------------------------
 std::optional<std::string> ReadTextFile(const std::string& filePath, std::ios_base::openmode mode);
 
-HashResult HashBytes(const std::byte* bytes, std::size_t len);
+struct BinaryData {
+    std::string                  filename;
+    HashResult                   hash;
+    std::size_t                  size;
+    std::unique_ptr<std::byte[]> data;
+};
+
+std::optional<BinaryData> ReadBinaryFile(const std::string& filePath);
+
+// ------------------------------------------------------------------
+//     Hash functions
+// ------------------------------------------------------------------
+HashResult64  HashBytes64(const std::byte* bytes, std::size_t len);
+HashResult128 HashBytes128(const std::byte* bytes, std::size_t len);
 
 } // namespace util
 } // namespace sdbox

@@ -30,6 +30,8 @@ std::optional<EventType> MaskToEventType(std::uint32_t mask) {
 }
 
 void InotifyWatcher::cleanup() {
+    stop();
+
     epoll_ctl(epollFd, EPOLL_CTL_DEL, inotifyFd, 0);
     epoll_ctl(epollFd, EPOLL_CTL_DEL, stopPipeFd[PipeRead], 0);
 
