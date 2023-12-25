@@ -21,8 +21,10 @@
         std::abort();           \
     } while (0)
 
-#define CHECK(x)  (!(!(x) && (FATAL("CHECK: {}", #x), true)))
-#define QCHECK(x) (!(!(x) && (QFATAL("CHECK: {}", #x), true)))
+#define CHECK(x) \
+    (!(x) ? (LOG_FATAL("CHECK: {}", #x), sdbox::PrintStackTrace(), std::abort(), false) : true)
+
+#define QCHECK(x) (!(x) ? (LOG_FATAL("CHECK: {}", #x), std::abort(), false) : true)
 
 #define CHECK_EQ(a, b) CHECK_OP_IMPL(a, b, ==)
 #define CHECK_NE(a, b) CHECK_OP_IMPL(a, b, !=)

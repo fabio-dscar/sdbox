@@ -1,10 +1,11 @@
 #ifndef __SDBOX_APP_H__
 #define __SDBOX_APP_H__
 
+#include <sdbox.h>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <check.h>
 #include <graphics.h>
 
 #include <functional>
@@ -14,8 +15,11 @@
 #include <glm/vec4.hpp>
 
 #include <ringbuffer.h>
-
+#include <thread.h>
 #include <win.h>
+#include <watcher/watcher.h>
+
+namespace fs = std::filesystem;
 
 namespace sdbox {
 
@@ -32,36 +36,48 @@ class SdboxApp {
 public:
     ~SdboxApp();
 
-    void init();
+    void init(const fs::path& folderPath);
     void setUniforms();
     void render();
     void loop();
 
 private:
+    void resetTime() {
+        time      = 0.0;
+        deltaTime = 0.0;
+
+        glfwSetTime(0.0);
+    }
+
     void updateTime() {
-        double timeSinceStart = glfwGetTime();
+        const double timeSinceStart = glfwGetTime();
 
         deltaTime = timeSinceStart - time;
         time      = timeSinceStart;
-
-        if (0) {
-            fps = 0;
-        }
+        fps       = 0.5 * fps + 0.5 / deltaTime;
     }
 
+    void setWinCallbacks();
     void reshape(int w, int h) { glViewport(0, 0, w, h); }
     void mouseMotion(double x, double y) {}
-    void mouseClick(MouseButton btn, bool isPressed) {}
+    void mouseClick(MouseButton btn, KeyState state) {}
     void processKeys(int key, int scancode, int action, int mods) {}
+
+    void createDirectoryWatcher(const fs::path& folderPath);
+    void createUniforms();
+    void createThreadPool();
 
     Window win;
 
-    int   frameNum  = 0;
-    float fps       = 0.0f;
-    float time      = 0.0f;
-    float deltaTime = 0.0f;
+    int    frameNum  = 0;
+    double fps       = 0.0;
+    double time      = 0.0;
+    double deltaTime = 0.0;
 
     RingBuffer uniformBuffer{};
+
+    std::unique_ptr<ThreadPool>       workers;
+    std::unique_ptr<DirectoryWatcher> watcher;
 
     std::array<OpenglContext*, 4> sharedCtxs;
 };

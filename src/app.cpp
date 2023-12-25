@@ -1,6 +1,11 @@
 #include <app.h>
 
+#include <shader.h>
+
 using namespace sdbox;
+using namespace std::literals;
+
+static std::unique_ptr<Program> program;
 
 Window InitOpenGL(const WindowOpts& winOpts) {
     if (!glfwInit())
@@ -37,55 +42,131 @@ Window InitOpenGL(const WindowOpts& winOpts) {
     glFrontFace(GL_CCW);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-    glDisable(GL_CULL_FACE); // We're rendering skybox back faces
-
     return win;
 }
 
 SdboxApp::~SdboxApp() {
+    workers->stopWorkers();
+
+    CleanupGeometry();
+
     for (auto ctx : sharedCtxs)
         glfwDestroyWindow(ctx);
+
+    glfwDestroyWindow(win.context());
     glfwTerminate();
 }
 
-void SdboxApp::init() {
-    win = InitOpenGL({.width = 640, .height = 480, .visible = true});
+void SdboxApp::createDirectoryWatcher(const fs::path& folderPath) {
+    auto watcherCallback = [&](const WatcherEvent& ev) {
+        std::cout << ev << '\n';
+    };
 
-    // Create shared contexts for threads
-    for (auto& ctx : sharedCtxs)
-        ctx = CreateContext({.share = win.context()});
+    auto fileChanged = [&](const WatcherEvent& ev) {
+        workers->enqueue([=]() {
+            auto shaders = std::array{"simple.vert"s, "simple.frag"s, "my_shader.frag"s};
+            auto program = sdbox::CompileAndLinkProgram("brdf", shaders);
 
-    auto callbacks = WindowCallbacks{
-        .resizeCb = [this](int w, int h) { this->reshape(w, h); },
-        .keysCb =
-            [this](int key, int scancode, int action, int mods) {
-                this->processKeys(key, scancode, action, mods);
-            },
-        .mouseClickCb =
-            [this](MouseButton btn, bool isPressed) { this->mouseClick(btn, isPressed); },
-        .mouseMotionCb =
-            [this](double x, double y) {
-                this->mouseMotion(x, y);
-            }};
+            auto v = sdbox::ExtractUniforms(*program);
+            for (const auto& u : v)
+                LOGI("{} {} {} {}", u.name, u.size, u.type, u.loc);
 
-    win.setCallbacks(callbacks);
+            LOGI("Compiled successfully! {}", program->id());
+        });
+    };
 
+    watcher = CreateDirectoryWatcher(folderPath);
+
+    using enum EventType;
+    watcher->registerCallback(FileCreated, watcherCallback);
+    watcher->registerCallback(FileMoved, watcherCallback);
+    watcher->registerCallback(FileDeleted, watcherCallback);
+    watcher->registerCallback(FileChanged, fileChanged);
+    watcher->init();
+
+    std::thread watcherThread{[&]() {
+        SetThreadName("dirwatcher");
+        watcher->watch();
+    }};
+    watcherThread.detach();
+}
+
+void SdboxApp::createUniforms() {
     // Triple slot ring buffer
     uniformBuffer.create(
-        EBufferType::UNIFORM, 3, sizeof(MainUniformBlock),
+        BufferType::Uniform, 3, sizeof(MainUniformBlock),
         GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
     uniformBuffer.registerBind(0, 0, sizeof(MainUniformBlock));
+
+    // Create uniform cache, etc
+}
+
+void SdboxApp::createThreadPool() {
+    // Create thread pool and share OGL context
+    workers = std::make_unique<ThreadPool>(4, [&](std::size_t idx) {
+        SetThreadName(std::format("threadpool#{}", idx));
+        glfwMakeContextCurrent(sharedCtxs[idx]);
+    });
+}
+
+void SdboxApp::init(const fs::path& folderPath) {
+    sdbox::SetThreadName("main");
+    sdbox::InitLogger();
+
+    win = InitOpenGL({.width = 640, .height = 480, .visible = true});
+
+    // Create shared contexts for threads
+    for (auto& ctx : sharedCtxs) {
+        ctx = CreateContext({.share = win.context()});
+        if (!ctx)
+            FATAL("Failed to create shared OpenGL context.");
+    }
+
+    setWinCallbacks();
+    createDirectoryWatcher(folderPath);
+    createThreadPool();
+    createUniforms();
+
+    auto shaders = std::array{"simple.vert"s, "simple.frag"s, "my_shader.frag"s};
+    program      = sdbox::CompileAndLinkProgram("main", shaders);
+    glUseProgram(program->id());
+}
+
+void SdboxApp::setWinCallbacks() {
+    auto resizeFunc = [this](int w, int h) {
+        this->reshape(w, h);
+    };
+
+    auto keysFunc = [this](int key, int scancode, int action, int mods) {
+        this->processKeys(key, scancode, action, mods);
+    };
+
+    auto mouseClickFunc = [this](MouseButton btn, KeyState state) {
+        this->mouseClick(btn, state);
+    };
+
+    auto mouseMotionFunc = [this](double x, double y) {
+        this->mouseMotion(x, y);
+    };
+
+    win.setCallbacks(
+        {.resizeCb      = resizeFunc,
+         .keysCb        = keysFunc,
+         .mouseClickCb  = mouseClickFunc,
+         .mouseMotionCb = mouseMotionFunc});
 }
 
 void SdboxApp::setUniforms() {
     auto ub = uniformBuffer.get<MainUniformBlock>();
 
-    const auto& [x, y] = win.getMouse();
     const auto& [w, h] = win.getDimensions();
+    const auto& mouse  = win.getMouse();
+
+    const auto& [left, right, mid] = mouse.buttons;
 
     ub->uResolution = {w, h, 0};
-    ub->uMouse      = {x, y, 0, 0};
+    ub->uMouse      = {mouse.x, mouse.y, left, right};
     ub->uTime       = time;
     ub->uTimeDelta  = deltaTime;
     ub->uFrameRate  = fps;
@@ -98,8 +179,10 @@ void SdboxApp::render() {
 
     setUniforms();
 
-    uniformBuffer.lock();
-    uniformBuffer.swap();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    RenderQuad();
+
+    uniformBuffer.lockAndSwap();
 }
 
 void SdboxApp::loop() {
@@ -108,8 +191,6 @@ void SdboxApp::loop() {
     while (!glfwWindowShouldClose(win.context())) {
         updateTime();
         render();
-
-        LOGI("{}", time);
 
         win.swapBuffers();
         win.pollEvents();

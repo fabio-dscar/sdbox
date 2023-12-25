@@ -64,7 +64,7 @@ void sdbox::PrintStackTrace() {
 
     backward::TraceResolver resolver;
     backward::StackTrace    st;
-    st.load_here();
+    st.load_here(8);
 
     std::vector<backward::ResolvedTrace> traces;
     for (int i = st.size() - 1; i >= 0; --i) {
@@ -81,8 +81,8 @@ void sdbox::PrintStackTrace() {
     printer.color_mode           = backward::ColorMode::always;
     printer.address              = true;
     printer.object               = true;
-    printer.inliner_context_size = 8;
-    printer.trace_context_size   = 8;
+    printer.inliner_context_size = 6;
+    printer.trace_context_size   = 6;
 
     std::ostringstream oss;
     printer.print(traces.begin(), traces.end(), oss);

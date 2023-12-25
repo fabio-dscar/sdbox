@@ -18,12 +18,37 @@ struct WindowOpts {
     OpenglContext* share   = nullptr;
 };
 
-enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
+enum class MouseButton : int { Left = 0, Right = 1, Middle = 2 };
+enum class KeyState : int { Released = 0, Pressed = 1, Repeat = 2 };
+
+struct MouseState {
+    double                  x = 0.0, y = 0.0;
+    std::array<KeyState, 3> buttons = {KeyState::Released};
+};
+
+static constexpr int MaxKeyNum = GLFW_KEY_LAST;
+struct KeyboardState {
+    std::array<KeyState, MaxKeyNum> keys = {KeyState::Released};
+};
+
+inline KeyState ActionToKeyState(int action) {
+    switch (action) {
+    case GLFW_PRESS:
+        return KeyState::Pressed;
+    case GLFW_RELEASE:
+        return KeyState::Released;
+    case GLFW_REPEAT:
+        return KeyState::Repeat;
+    default:
+        LOG_ERROR("Unknown key action {}.", action);
+        return KeyState::Released;
+    };
+}
 
 using ResizeCallback      = std::function<void(int, int)>;
 using KeysCallback        = std::function<void(int, int, int, int)>;
 using MouseMotionCallback = std::function<void(double, double)>;
-using MouseClickCallback  = std::function<void(MouseButton, bool)>;
+using MouseClickCallback  = std::function<void(MouseButton, KeyState)>;
 
 struct WindowCallbacks {
     ResizeCallback      resizeCb;
@@ -71,31 +96,37 @@ public:
     }
 
     void processKeys(int key, int scancode, int action, int mods) {
+        auto keyState      = ActionToKeyState(action);
+        keyboard.keys[key] = keyState;
+
         if (callbacks.keysCb)
             callbacks.keysCb(key, scancode, action, mods);
     }
 
-    void processMouseClick(int button, int action, int mods) {
+    void processMouseClick(int button, int action, int /*mods*/) {
         if (button > 2)
             return;
 
+        auto state            = ActionToKeyState(action);
+        mouse.buttons[button] = state;
+
         if (callbacks.mouseClickCb)
-            callbacks.mouseClickCb(static_cast<MouseButton>(button), action == GLFW_PRESS);
+            callbacks.mouseClickCb(static_cast<MouseButton>(button), state);
     }
 
     void processMouseMotion(double x, double y) {
-        double dx = mouseX - x;
-        double dy = -(mouseY - y);
+        // double dx = mouse.x - x;
+        // double dy = -(mouse.y - y);
 
-        mouseX = x;
-        mouseY = y;
+        mouse.x = x;
+        mouse.y = height - y;
 
         if (callbacks.mouseMotionCb)
             callbacks.mouseMotionCb(x, y);
     }
 
-    std::tuple<double, double> getMouse() { return {mouseX, mouseY}; }
-    std::tuple<int, int>       getDimensions() { return {width, height}; }
+    const MouseState&    getMouse() { return mouse; }
+    std::tuple<int, int> getDimensions() { return {width, height}; }
 
     void setCallbacks(WindowCallbacks winCallbacks) {
         callbacks = winCallbacks;
@@ -128,8 +159,8 @@ private:
     int         height   = 32;
     std::string winTitle = "sdbox";
 
-    double mouseX = 0.0;
-    double mouseY = 0.0;
+    MouseState    mouse;
+    KeyboardState keyboard;
 
     WindowCallbacks callbacks;
     OpenglContext*  ctx;

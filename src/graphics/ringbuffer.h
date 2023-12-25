@@ -16,7 +16,7 @@ class RingBuffer : private SyncedBuffer {
 public:
     RingBuffer() = default;
 
-    void create(EBufferType type, unsigned int num, std::size_t size, unsigned int flags);
+    void create(BufferType type, unsigned int num, std::size_t size, unsigned int flags);
 
     template<typename T>
     T* get() const {
@@ -32,8 +32,9 @@ public:
     }
 
     void lock();
-    void wait();
     void swap();
+    void lockAndSwap();
+    void wait();
 
     void registerBind(unsigned int idx, std::size_t offset, std::size_t size);
     void rebind() const;
