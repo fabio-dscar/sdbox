@@ -6,7 +6,15 @@
 
 namespace sdbox {
 
-enum class EBufferType : unsigned int { ARRAY = 0, ELEMENT = 1, UNIFORM = 2 };
+enum class BufferType : unsigned int { Array = 0, Element = 1, Uniform = 2 };
+enum class BufferFlag : unsigned int {
+    Dynamic       = 0x1,
+    Read          = 0x2,
+    Write         = 0x4,
+    Persistent    = 0x8,
+    Coherent      = 0x16,
+    ClientStorage = 0x32
+};
 
 // In nanoseconds
 static constexpr unsigned long FenceTimeout = 1.0 / 30.0 * 1e9;
@@ -14,10 +22,10 @@ static constexpr unsigned long FenceTimeout = 1.0 / 30.0 * 1e9;
 class Buffer {
 public:
     Buffer() = default;
-    Buffer(EBufferType type, std::size_t size, unsigned int flags, void* data = nullptr);
+    Buffer(BufferType type, std::size_t size, unsigned int flags, void* data = nullptr);
     ~Buffer();
 
-    void create(EBufferType type, std::size_t size, unsigned int flags, void* data);
+    void create(BufferType type, std::size_t size, unsigned int flags, void* data);
     void bindRange(unsigned int index, std::size_t offset, std::size_t size) const;
 
     template<typename T>

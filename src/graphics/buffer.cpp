@@ -4,7 +4,7 @@ using namespace sdbox;
 
 const GLenum OGLBufferTarget[] = {GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER, GL_UNIFORM_BUFFER};
 
-Buffer::Buffer(EBufferType type, std::size_t size, unsigned int flags, void* data) {
+Buffer::Buffer(BufferType type, std::size_t size, unsigned int flags, void* data) {
     create(type, size, flags, data);
 }
 
@@ -17,7 +17,7 @@ Buffer::~Buffer() {
     }
 }
 
-void Buffer::create(EBufferType type, std::size_t pSize, unsigned int pFlags, void* data) {
+void Buffer::create(BufferType type, std::size_t pSize, unsigned int pFlags, void* data) {
     target = OGLBufferTarget[static_cast<unsigned int>(type)];
     flags  = pFlags;
     size   = pSize;
