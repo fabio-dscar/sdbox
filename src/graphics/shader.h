@@ -65,10 +65,6 @@ std::string BuildDefinesBlock(std::span<std::string> defines);
 std::string GetShaderLog(unsigned int handle);
 std::string GetProgramError(unsigned int handle);
 
-enum class UniformType {
-
-};
-
 struct UniformInfo {
     GLenum      type;
     std::string name;
@@ -79,8 +75,6 @@ struct UniformInfo {
 inline std::vector<UniformInfo> ExtractUniforms(const Program& prog) {
     GLint count;
     glGetProgramiv(prog.id(), GL_ACTIVE_UNIFORMS, &count);
-
-    LOGI("Uniform Count: {}", count);
 
     std::vector<UniformInfo> uniformList;
     uniformList.reserve(count);

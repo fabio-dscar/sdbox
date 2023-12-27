@@ -7,6 +7,7 @@
 #include <filesystem>
 
 #include <xxhash/xxhash.hpp>
+#include <xxhash/constexpr-xxh3.h>
 
 namespace sdbox {
 namespace util {
@@ -14,7 +15,7 @@ namespace util {
 using HashResult64  = std::uint64_t;
 using HashResult128 = xxh::uint128_t;
 
-using HashResult = HashResult128;
+using HashResult = HashResult64;
 
 // ------------------------------------------------------------------
 //     General IO
@@ -33,8 +34,29 @@ std::optional<BinaryData> ReadBinaryFile(const std::string& filePath);
 // ------------------------------------------------------------------
 //     Hash functions
 // ------------------------------------------------------------------
-HashResult64  HashBytes64(const std::byte* bytes, std::size_t len);
-HashResult128 HashBytes128(const std::byte* bytes, std::size_t len);
+consteval HashResult64 Hash(const char* bytes, const std::size_t len) {
+    return constexpr_xxh3::XXH3_64bits_const(bytes, len);
+}
+
+consteval HashResult64 Hash(std::string str) {
+    return constexpr_xxh3::XXH3_64bits_const(str);
+}
+
+inline constexpr HashResult64 HashBytes64(const std::byte* bytes, std::size_t len) {
+    return xxh::xxhash3<64>(bytes, len);
+}
+
+inline constexpr HashResult64 HashBytes64(const std::string& str) {
+    return xxh::xxhash3<64>(str);
+}
+
+inline HashResult128 HashBytes128(const std::byte* bytes, std::size_t len) {
+    return xxh::xxhash3<128>(bytes, len);
+}
+
+inline HashResult128 HashBytes128(const std::string& str) {
+    return xxh::xxhash3<128>(str);
+}
 
 } // namespace util
 } // namespace sdbox

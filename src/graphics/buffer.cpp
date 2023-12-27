@@ -4,28 +4,29 @@ using namespace sdbox;
 
 const GLenum OGLBufferTarget[] = {GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER, GL_UNIFORM_BUFFER};
 
-Buffer::Buffer(BufferType type, std::size_t size, unsigned int flags, void* data) {
+Buffer::Buffer(BufferType type, std::size_t size, BufferFlag flags, void* data) {
     create(type, size, flags, data);
 }
 
 Buffer::~Buffer() {
     if (handle != 0) {
-        if (flags & GL_MAP_PERSISTENT_BIT)
+        if (HasFlag(flags, BufferFlag::Persistent))
             glUnmapNamedBuffer(handle);
 
         glDeleteBuffers(1, &handle);
     }
 }
 
-void Buffer::create(BufferType type, std::size_t pSize, unsigned int pFlags, void* data) {
+void Buffer::create(BufferType type, std::size_t pSize, BufferFlag pFlags, void* data) {
     target = OGLBufferTarget[static_cast<unsigned int>(type)];
     flags  = pFlags;
     size   = pSize;
     glCreateBuffers(1, &handle);
-    glNamedBufferStorage(handle, size, data, flags);
+    glNamedBufferStorage(handle, size, data, static_cast<GLbitfield>(flags));
 
-    if (flags & GL_MAP_PERSISTENT_BIT)
-        ptr = reinterpret_cast<std::byte*>(glMapNamedBufferRange(handle, 0, size, flags));
+    if (HasFlag(flags, BufferFlag::Persistent))
+        ptr = reinterpret_cast<std::byte*>(
+            glMapNamedBufferRange(handle, 0, size, static_cast<GLbitfield>(flags)));
 }
 
 void Buffer::bindRange(unsigned int index, std::size_t offset, std::size_t bSize) const {

@@ -2,7 +2,7 @@
 
 using namespace sdbox;
 
-void RingBuffer::create(BufferType type, unsigned int num, std::size_t size, unsigned int flags) {
+void RingBuffer::create(BufferType type, unsigned int num, std::size_t size, BufferFlag flags) {
     numSlots = num;
     baseSize = size;
     Buffer::create(type, baseSize * numSlots, flags, NULL);

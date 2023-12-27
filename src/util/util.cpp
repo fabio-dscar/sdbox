@@ -25,7 +25,7 @@ util::ReadTextFile(const std::string& filePath, std::ios_base::openmode mode) {
 }
 
 std::optional<BinaryData> util::ReadBinaryFile(const std::string& filePath) {
-    std::ifstream file(filePath, std::ios_base::binary | std::ios_base::in);
+    std::ifstream file(filePath, std::ios_base::binary | std::ios_base::in | std::ios_base::ate);
     if (file.fail()) {
         LOG_ERROR("Failed to open file {}. {}", filePath, std::strerror(errno));
         return std::nullopt;
@@ -33,7 +33,6 @@ std::optional<BinaryData> util::ReadBinaryFile(const std::string& filePath) {
 
     BinaryData bin;
 
-    file.seekg(0, std::ios::end);
     auto size = file.tellg();
     if (size == -1) {
         LOG_ERROR("Failed to query size of binary file {}. {}", filePath, std::strerror(errno));
@@ -45,16 +44,8 @@ std::optional<BinaryData> util::ReadBinaryFile(const std::string& filePath) {
     bin.data = std::make_unique<std::byte[]>(bin.size);
     file.read(reinterpret_cast<char*>(bin.data.get()), bin.size);
 
-    bin.hash     = HashBytes128(bin.data.get(), bin.size);
+    bin.hash     = HashBytes64(bin.data.get(), bin.size);
     bin.filename = fs::path(filePath).filename();
 
     return bin;
-}
-
-HashResult64 util::HashBytes64(const std::byte* bytes, std::size_t len) {
-    return xxh::xxhash3<64>(bytes, len);
-}
-
-HashResult128 util::HashBytes128(const std::byte* bytes, std::size_t len) {
-    return xxh::xxhash3<128>(bytes, len);
 }

@@ -18,6 +18,9 @@
 #include <thread.h>
 #include <win.h>
 #include <watcher/watcher.h>
+#include <util.h>
+
+#include <unordered_set>
 
 namespace fs = std::filesystem;
 
@@ -61,7 +64,13 @@ private:
     void reshape(int w, int h) { glViewport(0, 0, w, h); }
     void mouseMotion(double x, double y) {}
     void mouseClick(MouseButton btn, KeyState state) {}
-    void processKeys(int key, int scancode, int action, int mods) {}
+    void processKeys(int key, int scancode, int action, int mods) {
+        if (key == 'P' && action == GLFW_RELEASE) {
+            paused = !paused;
+            if (!paused)
+                glfwSetTime(time);
+        }
+    }
 
     void createDirectoryWatcher(const fs::path& folderPath);
     void createUniforms();
@@ -73,6 +82,7 @@ private:
     double fps       = 0.0;
     double time      = 0.0;
     double deltaTime = 0.0;
+    bool   paused    = false;
 
     RingBuffer uniformBuffer{};
 

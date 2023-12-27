@@ -8,13 +8,26 @@ namespace sdbox {
 
 enum class BufferType : unsigned int { Array = 0, Element = 1, Uniform = 2 };
 enum class BufferFlag : unsigned int {
-    Dynamic       = 0x1,
-    Read          = 0x2,
-    Write         = 0x4,
-    Persistent    = 0x8,
-    Coherent      = 0x16,
-    ClientStorage = 0x32
+    None          = 0,
+    Dynamic       = GL_DYNAMIC_STORAGE_BIT,
+    Read          = GL_MAP_READ_BIT,
+    Write         = GL_MAP_WRITE_BIT,
+    Persistent    = GL_MAP_PERSISTENT_BIT,
+    Coherent      = GL_MAP_COHERENT_BIT,
+    ClientStorage = GL_CLIENT_STORAGE_BIT
 };
+
+inline BufferFlag operator|(BufferFlag lhs, BufferFlag rhs) {
+    auto lflag = static_cast<unsigned int>(lhs);
+    auto rflag = static_cast<unsigned int>(rhs);
+    return static_cast<BufferFlag>(lflag | rflag);
+}
+
+inline bool HasFlag(BufferFlag lhs, BufferFlag rhs) {
+    auto lflag = static_cast<unsigned int>(lhs);
+    auto rflag = static_cast<unsigned int>(rhs);
+    return lflag & rflag;
+}
 
 // In nanoseconds
 static constexpr unsigned long FenceTimeout = 1.0 / 30.0 * 1e9;
@@ -22,10 +35,12 @@ static constexpr unsigned long FenceTimeout = 1.0 / 30.0 * 1e9;
 class Buffer {
 public:
     Buffer() = default;
-    Buffer(BufferType type, std::size_t size, unsigned int flags, void* data = nullptr);
+    Buffer(
+        BufferType type, std::size_t size, BufferFlag flags = BufferFlag::None,
+        void* data = nullptr);
     ~Buffer();
 
-    void create(BufferType type, std::size_t size, unsigned int flags, void* data);
+    void create(BufferType type, std::size_t size, BufferFlag flags, void* data);
     void bindRange(unsigned int index, std::size_t offset, std::size_t size) const;
 
     template<typename T>
@@ -38,9 +53,9 @@ protected:
     unsigned int handle = 0;
 
 private:
-    std::byte*   ptr   = nullptr;
-    std::size_t  size  = 0;
-    unsigned int flags = 0;
+    std::byte*  ptr   = nullptr;
+    std::size_t size  = 0;
+    BufferFlag  flags = BufferFlag::None;
 };
 
 // --------------------------------------------------------------------------------------

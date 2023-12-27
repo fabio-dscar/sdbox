@@ -18,7 +18,7 @@ constexpr std::uint32_t EventMask = IN_MOVE | IN_CREATE | IN_CLOSE_WRITE | IN_DE
 
 class InotifyWatcher : public DirectoryWatcher {
 public:
-    InotifyWatcher(const std::filesystem::path& path) : DirectoryWatcher(path) {}
+    InotifyWatcher(const std::filesystem::path& path);
     ~InotifyWatcher() { cleanup(); }
 
     void init() override;
@@ -26,8 +26,6 @@ public:
     void stop() override;
 
 private:
-    bool hasStopped();
-
     std::optional<WatcherEvent> createEvent(const inotify_event& ev);
 
     std::size_t readPoll();
@@ -36,7 +34,7 @@ private:
     void        dispatchEvents();
 
     void setError(int errNo) { error = errNo; }
-
+    bool hasStopped();
     void cleanup();
 
     std::map<std::uint32_t, std::string> renameMap{};
@@ -52,9 +50,8 @@ private:
     std::mutex stopMutex;
     bool       stopped = false;
 
-    int inotifyFd = -1;
-    int epollFd   = -1;
-
+    int inotifyFd   = -1;
+    int epollFd     = -1;
     int watchHandle = -1;
 
     int error;

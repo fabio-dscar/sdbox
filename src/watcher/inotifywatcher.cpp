@@ -29,6 +29,14 @@ std::optional<EventType> MaskToEventType(std::uint32_t mask) {
     return std::nullopt;
 }
 
+InotifyWatcher::InotifyWatcher(const std::filesystem::path& path) : DirectoryWatcher(path) {
+    if (!fs::exists(dirPath))
+        FATAL("Path {} does not exist.", dirPath.string());
+
+    if (!fs::is_directory(dirPath))
+        FATAL("Provided path is not a directory.");
+}
+
 void InotifyWatcher::cleanup() {
     stop();
 
@@ -65,12 +73,6 @@ void InotifyWatcher::init() {
         FATAL("Failed to add stop pipe's fd to epoll. {}", strerror(errno));
 
     // Add directory to watches
-    if (!fs::exists(dirPath))
-        FATAL("Path {} does not exist.", dirPath.string());
-
-    if (!fs::is_directory(dirPath))
-        FATAL("Provided path is not a directory.");
-
     watchHandle = inotify_add_watch(inotifyFd, dirPath.c_str(), EventMask);
     if (watchHandle == -1)
         FATAL("Failed to create a watch for {}.", dirPath.string());

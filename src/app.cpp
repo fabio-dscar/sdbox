@@ -92,12 +92,13 @@ void SdboxApp::createDirectoryWatcher(const fs::path& folderPath) {
 }
 
 void SdboxApp::createUniforms() {
-    // Triple slot ring buffer
-    uniformBuffer.create(
-        BufferType::Uniform, 3, sizeof(MainUniformBlock),
-        GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+    using enum BufferFlag;
 
-    uniformBuffer.registerBind(0, 0, sizeof(MainUniformBlock));
+    // Triple slot ring buffer
+    auto uboSize = AlignUniformBuffer(sizeof(MainUniformBlock));
+    uniformBuffer.create(BufferType::Uniform, 3, uboSize, Write | Persistent | Coherent);
+
+    uniformBuffer.registerBind(0, 0, uboSize);
 
     // Create uniform cache, etc
 }
@@ -189,12 +190,14 @@ void SdboxApp::loop() {
     glfwSetTime(0.0);
 
     while (!glfwWindowShouldClose(win.context())) {
-        updateTime();
+        if (!paused)
+            updateTime();
+
         render();
 
         win.swapBuffers();
-        win.pollEvents();
-
         ++frameNum;
+
+        win.pollEvents();
     }
 }

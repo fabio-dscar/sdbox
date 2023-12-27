@@ -16,7 +16,8 @@ class RingBuffer : private SyncedBuffer {
 public:
     RingBuffer() = default;
 
-    void create(BufferType type, unsigned int num, std::size_t size, unsigned int flags);
+    void create(
+        BufferType type, unsigned int num, std::size_t size, BufferFlag flags = BufferFlag::None);
 
     template<typename T>
     T* get() const {
