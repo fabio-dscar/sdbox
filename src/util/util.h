@@ -20,8 +20,6 @@ using HashResult = HashResult64;
 // ------------------------------------------------------------------
 //     General IO
 // ------------------------------------------------------------------
-std::optional<std::string> ReadTextFile(const std::string& filePath, std::ios_base::openmode mode);
-
 struct BinaryData {
     std::string                  filename;
     HashResult                   hash;
@@ -29,7 +27,8 @@ struct BinaryData {
     std::unique_ptr<std::byte[]> data;
 };
 
-std::optional<BinaryData> ReadBinaryFile(const std::string& filePath);
+std::optional<std::string> ReadTextFile(const std::string& filePath);
+std::optional<BinaryData>  ReadBinaryFile(const std::string& filePath);
 
 // ------------------------------------------------------------------
 //     Hash functions

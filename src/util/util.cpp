@@ -6,17 +6,21 @@ using namespace sdbox::util;
 
 namespace fs = std::filesystem;
 
-std::optional<std::string>
-util::ReadTextFile(const std::string& filePath, std::ios_base::openmode mode) {
-    std::ifstream file(filePath, mode);
+std::optional<std::string> util::ReadTextFile(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios_base::in | std::ios_base::ate);
     if (file.fail()) {
         LOG_ERROR("Failed to open file {}. {}", filePath, std::strerror(errno));
         return std::nullopt;
     }
 
+    auto size = file.tellg();
+    if (size == -1) {
+        LOG_ERROR("Failed to query size of file {}. {}", filePath, std::strerror(errno));
+        return std::nullopt;
+    }
+
     std::string contents;
-    file.seekg(0, std::ios::end);
-    contents.reserve(static_cast<std::size_t>(file.tellg()));
+    contents.reserve(size);
     file.seekg(0, std::ios::beg);
 
     contents.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -31,8 +35,6 @@ std::optional<BinaryData> util::ReadBinaryFile(const std::string& filePath) {
         return std::nullopt;
     }
 
-    BinaryData bin;
-
     auto size = file.tellg();
     if (size == -1) {
         LOG_ERROR("Failed to query size of binary file {}. {}", filePath, std::strerror(errno));
@@ -40,6 +42,7 @@ std::optional<BinaryData> util::ReadBinaryFile(const std::string& filePath) {
     }
     file.seekg(0, std::ios::beg);
 
+    BinaryData bin;
     bin.size = size;
     bin.data = std::make_unique<std::byte[]>(bin.size);
     file.read(reinterpret_cast<char*>(bin.data.get()), bin.size);
