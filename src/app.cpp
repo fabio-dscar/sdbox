@@ -57,6 +57,43 @@ SdboxApp::~SdboxApp() {
     glfwTerminate();
 }
 
+void RebuildProgram(const Resource<Shader>& sh, ResourceRegistry& reg) {
+    auto vert = reg.getResource<Shader>(Hash("simple.vert"));
+    auto frag = reg.getResource<Shader>(Hash("simple.frag"));
+    DCHECK(vert && frag);
+
+    auto prog = std::make_unique<Program>(sh.name);
+    prog->addShader(*(vert.value().resource));
+    prog->addShader(*(frag.value().resource));
+    prog->addShader(*sh.resource);
+
+    if (!prog->link())
+        return;
+
+    for (int s = 0; s < 8; ++s)
+        glProgramUniform1i(prog->id(), s, s);
+
+    reg.addResource(Resource<Program>{sh.name, sh.nameHash, 0, std::move(prog)});
+}
+
+std::optional<Resource<Shader>> LoadShaderResource(const fs::path& path, ResourceRegistry& reg) {
+    auto shader = LoadShaderFile(path);
+    if (!shader)
+        return std::nullopt;
+
+    const auto fileName = path.filename();
+
+    const auto nameHash = HashBytes64(fileName);
+    const auto srcHash  = HashBytes64(shader->getSource());
+    if (reg.exists<Shader>(nameHash, srcHash) || !shader->compile())
+        return std::nullopt;
+
+    auto resource = Resource{fileName, nameHash, srcHash, std::move(shader)};
+    reg.addResource(resource);
+
+    return resource;
+}
+
 void SdboxApp::createDirectoryWatcher(const fs::path& folderPath) {
     auto watcherCallback = [&](const WatcherEvent& ev) {
         std::cout << ev << '\n';
@@ -64,14 +101,12 @@ void SdboxApp::createDirectoryWatcher(const fs::path& folderPath) {
 
     auto fileChanged = [&](const WatcherEvent& ev) {
         workers->enqueue([=]() {
-            auto shaders = std::array{"simple.vert"s, "simple.frag"s, "my_shader.frag"s};
-            auto program = sdbox::CompileAndLinkProgram("brdf", shaders);
+            if (!IsBuiltinName(ev.name))
+                return;
 
-            auto v = sdbox::ExtractUniforms(*program);
-            for (const auto& u : v)
-                LOGI("{} {} {} {}", u.name, u.size, u.type, u.loc);
-
-            LOGI("Compiled successfully! {}", program->id());
+            auto shader = LoadShaderResource(dirPath / ev.name, res);
+            if (shader)
+                RebuildProgram(shader.value(), res);
         });
     };
 
@@ -105,17 +140,31 @@ void SdboxApp::createUniforms() {
 
 void SdboxApp::createThreadPool() {
     // Create thread pool and share OGL context
-    workers = std::make_unique<ThreadPool>(4, [&](std::size_t idx) {
+    workers = std::make_unique<ThreadPool>(NumWorkers, [&](std::size_t idx) {
         SetThreadName(std::format("threadpool#{}", idx));
         glfwMakeContextCurrent(sharedCtxs[idx]);
     });
 }
 
-void SdboxApp::init(const fs::path& folderPath) {
-    sdbox::SetThreadName("main");
-    sdbox::InitLogger();
+void SdboxApp::loadInitialShaders(const fs::path& folderPath) {
+    auto vert = LoadShaderResource(ShaderFolder / "simple.vert", res);
+    auto frag = LoadShaderResource(ShaderFolder / "simple.frag", res);
+    CHECK(vert && frag);
 
-    win = InitOpenGL({.width = 640, .height = 480, .visible = true});
+    auto main = LoadShaderResource(folderPath / "main.glsl", res);
+    if (!main)
+        FATAL("Make sure there is a main.glsl file on the specified folder.");
+
+    RebuildProgram(*main, res);
+}
+
+void SdboxApp::init(const fs::path& folderPath) {
+    SetThreadName("main");
+    InitLogger();
+
+    dirPath = folderPath;
+
+    win = InitOpenGL({.width = 800, .height = 600, .visible = true});
 
     // Create shared contexts for threads
     for (auto& ctx : sharedCtxs) {
@@ -129,9 +178,7 @@ void SdboxApp::init(const fs::path& folderPath) {
     createThreadPool();
     createUniforms();
 
-    auto shaders = std::array{"simple.vert"s, "simple.frag"s, "my_shader.frag"s};
-    program      = sdbox::CompileAndLinkProgram("main", shaders);
-    glUseProgram(program->id());
+    loadInitialShaders(folderPath);
 }
 
 void SdboxApp::setWinCallbacks() {
@@ -174,10 +221,17 @@ void SdboxApp::setUniforms() {
     ub->uFrame      = frameNum;
 }
 
+void SdboxApp::setProgram() {
+    auto prog = res.getResource<Program>(Hash("main.glsl"));
+    if (prog)
+        glUseProgram(prog.value().resource->id());
+}
+
 void SdboxApp::render() {
     uniformBuffer.wait();
     uniformBuffer.rebind();
 
+    setProgram();
     setUniforms();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -190,14 +244,14 @@ void SdboxApp::loop() {
     glfwSetTime(0.0);
 
     while (!glfwWindowShouldClose(win.context())) {
-        if (!paused)
-            updateTime();
-
         render();
 
-        win.swapBuffers();
-        ++frameNum;
+        if (!paused) {
+            updateTime();
+            ++frameNum;
+        }
 
+        win.swapBuffers();
         win.pollEvents();
     }
 }

@@ -14,6 +14,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ext)
 
 set(SDBOX_SOURCES
   src/app.cpp
+  src/win.cpp
   src/util/util.cpp
   src/util/log.cpp
   src/util/thread.cpp

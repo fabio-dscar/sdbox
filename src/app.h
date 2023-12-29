@@ -22,6 +22,8 @@
 
 #include <unordered_set>
 
+#include <resource.h>
+
 namespace fs = std::filesystem;
 
 namespace sdbox {
@@ -35,6 +37,8 @@ struct alignas(256) MainUniformBlock {
     int       uFrame;      // Number of the frame
 };
 
+static constexpr int NumWorkers = 2;
+
 class SdboxApp {
 public:
     ~SdboxApp();
@@ -45,6 +49,9 @@ public:
     void loop();
 
 private:
+    void setProgram();
+    void loadInitialShaders(const fs::path& folderPath);
+
     void resetTime() {
         time      = 0.0;
         deltaTime = 0.0;
@@ -84,12 +91,16 @@ private:
     double deltaTime = 0.0;
     bool   paused    = false;
 
+    fs::path dirPath;
+
     RingBuffer uniformBuffer{};
 
     std::unique_ptr<ThreadPool>       workers;
     std::unique_ptr<DirectoryWatcher> watcher;
 
-    std::array<OpenglContext*, 4> sharedCtxs;
+    std::array<OpenglContext*, NumWorkers> sharedCtxs;
+
+    ResourceRegistry res;
 };
 
 } // namespace sdbox
