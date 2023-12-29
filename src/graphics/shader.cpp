@@ -21,7 +21,7 @@ void Shader::handleIncludes() {
             FATAL("Repeated/Recursively including '{}' at '{}'.", file, name);
 
         auto filePath = ShaderFolder / file;
-        auto src      = util::ReadTextFile(filePath, std::ios_base::in);
+        auto src      = util::ReadTextFile(filePath);
         if (!src)
             FATAL("Couldn't open included shader '{}' in '{}'", file, name);
 
@@ -33,12 +33,55 @@ void Shader::handleIncludes() {
 
 Shader::Shader(const std::string& name, ShaderType type, const std::string& src)
     : name(name), source(src), type(type) {
-    handleIncludes();
-
     handle = glCreateShader(type);
-    if (handle == 0)
+    if (handle == 0) {
         LOG_ERROR("Could not create shader {}", name);
+    } else {
+        if (!hasVersionDir())
+            setVersion(DefaultVer);
+
+        handleIncludes();
+    }
 }
+
+bool Shader::hasVersionDir() {
+    return source.find("#version ") != std::string::npos;
+}
+
+std::string Shader::getVersion() {
+    auto start = source.find("#version ");
+
+    if (start == std::string::npos)
+        return "none";
+
+    start += std::strlen("#version ");
+    auto end = source.find('\n', start);
+    return source.substr(start, end - start);
+}
+
+void Shader::setVersion(const std::string& ver) {
+    auto start = source.find("#version");
+
+    auto directive = std::format("#version {}\n", ver);
+    if (start != std::string::npos) {
+        auto end = source.find('\n', start);
+        source.replace(start, end - start, directive);
+    } else {
+        source.insert(0, directive);
+    }
+}
+
+void Shader::include(const std::string& include) {
+    auto start = source.find("#version");
+    auto end   = 0;
+
+    if (start != std::string::npos)
+        end = source.find('\n', start);
+
+    source.insert(end + 1, include);
+}
+
+using namespace std::literals;
 
 bool Shader::compile(const std::string& defines) {
     if (!isValid()) {
@@ -46,8 +89,10 @@ bool Shader::compile(const std::string& defines) {
         return false;
     }
 
-    const char* sources[] = {defines.c_str(), source.c_str()};
-    glShaderSource(handle, 2, sources, 0);
+    include(defines);
+
+    const char* sources[] = {source.c_str()};
+    glShaderSource(handle, 1, sources, 0);
     glCompileShader(handle);
 
     GLint result;
@@ -64,7 +109,7 @@ bool Shader::compile(const std::string& defines) {
 Program::Program(const std::string& name) : name(name) {
     handle = glCreateProgram();
     if (handle == 0) {
-        std::string message = GetProgramError(handle);
+        std::string message = GetProgramLog(handle);
         LOG_ERROR("Could not create program {}", name);
     }
 }
@@ -89,20 +134,16 @@ bool Program::link() {
 
     glLinkProgram(handle);
 
+    for (GLuint sid : srcHandles)
+        glDetachShader(handle, sid);
+
     GLint res;
     glGetProgramiv(handle, GL_LINK_STATUS, &res);
     if (res != GL_TRUE) {
-        for (GLuint sid : srcHandles)
-            glDetachShader(handle, sid);
-
-        std::string message = GetProgramError(handle);
+        std::string message = GetProgramLog(handle);
         LOG_ERROR("Program linking error: {}", message);
         return false;
     }
-
-    // Detach shaders after successful linking
-    for (GLuint sid : srcHandles)
-        glDetachShader(handle, sid);
 
     return true;
 }
@@ -123,7 +164,7 @@ std::string sdbox::GetShaderLog(unsigned int handle) {
     return {log.get()};
 }
 
-std::string sdbox::GetProgramError(unsigned int handle) {
+std::string sdbox::GetProgramLog(unsigned int handle) {
     GLint logLen;
     glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &logLen);
 
@@ -133,34 +174,41 @@ std::string sdbox::GetProgramError(unsigned int handle) {
     return {log.get()};
 }
 
-std::unique_ptr<Shader> sdbox::LoadShaderFile(const std::string& fileName) {
-    ShaderType type = Fragment;
-
-    // Deduce type from extension, if possible
-    auto ext = path(fileName).extension();
-    if (ext == ".frag" || ext == ".fs")
-        type = Fragment;
+ShaderType sdbox::DeduceShaderType(const std::string& fileName) {
+    auto ext = std::filesystem::path(fileName).extension();
+    if (ext == ".frag" || ext == ".fs" || ext == ".glsl")
+        return Fragment;
     else if (ext == ".vert" || ext == ".vs")
-        type = Vertex;
-    else
-        FATAL("Couldn't deduce type for shader: {}", fileName);
+        return Vertex;
 
+    LOG_WARN(
+        "Couldn't deduce type for shader: {}. Choosing 'fragment' shader by default.", fileName);
+    return Fragment;
+}
+
+std::unique_ptr<Shader>
+LoadShaderFromMemory(const std::string& name, const char* bytes, std::size_t size) {
+    std::string contents{bytes, size};
+    ShaderType  type = DeduceShaderType(name);
+    return std::make_unique<Shader>(name, type, contents);
+}
+
+std::unique_ptr<Shader> sdbox::LoadShaderFile(const fs::path& fileName) {
+    // Deduce type from extension, if possible
+    auto type = DeduceShaderType(fileName);
     return LoadShaderFile(type, fileName);
 }
 
-std::unique_ptr<Shader> sdbox::LoadShaderFile(ShaderType type, const std::string& fileName) {
-    auto filePath = ShaderFolder / fileName;
-    auto source   = util::ReadTextFile(ShaderFolder / fileName, std::ios_base::in);
-    if (!source.has_value()) {
-        LOG_ERROR("Couldn't load shader file {}", filePath.string());
+std::unique_ptr<Shader> sdbox::LoadShaderFile(ShaderType type, const fs::path& filePath) {
+    auto source = util::ReadTextFile(filePath);
+    if (!source.has_value())
         return nullptr;
-    }
 
     return std::make_unique<Shader>(filePath.filename(), type, source.value());
 }
 
 std::string sdbox::BuildDefinesBlock(std::span<std::string> defines) {
-    std::string defBlock = VerDirective;
+    std::string defBlock = "";
     for (auto& def : defines) {
         if (!def.empty()) {
             defBlock.append("#define ");

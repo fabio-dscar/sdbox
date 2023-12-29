@@ -5,6 +5,8 @@
 
 #include <glad/glad.h>
 
+namespace fs = std::filesystem;
+
 namespace sdbox {
 
 enum ShaderType {
@@ -14,19 +16,32 @@ enum ShaderType {
     Compute  = GL_COMPUTE_SHADER
 };
 
-static const std::string           VerDirective = "#version 460 core\n\n";
+static const std::string           DefaultVer   = "460 core";
 static const std::filesystem::path ShaderFolder = "./glsl";
 
 class Shader {
 public:
     Shader(const std::string& name, ShaderType type, const std::string& src);
+    ~Shader() {
+        if (handle > 0)
+            glDeleteShader(handle);
+    }
 
     unsigned int id() const { return handle; }
 
-    bool compile(const std::string& defines = VerDirective);
+    void setVersion(const std::string& ver);
+    void include(const std::string& source);
+
+    bool compile(const std::string& defines = "");
     bool isValid() const { return handle > 0; }
 
+    const std::string& getName() const { return name; }
+    const std::string& getSource() const { return source; }
+
 private:
+    std::string getVersion();
+    bool        hasVersionDir();
+
     void handleIncludes();
 
     std::string  name;
@@ -54,8 +69,13 @@ private:
     unsigned int              handle = 0;
 };
 
-std::unique_ptr<Shader> LoadShaderFile(const std::string& filePath);
-std::unique_ptr<Shader> LoadShaderFile(ShaderType type, const std::string& filePath);
+ShaderType DeduceShaderType(const std::string& fileName);
+
+std::unique_ptr<Shader>
+LoadShaderFromMemory(const std::string& name, const char* bytes, std::size_t size);
+
+std::unique_ptr<Shader> LoadShaderFile(const fs::path& filePath);
+std::unique_ptr<Shader> LoadShaderFile(ShaderType type, const fs::path& filePath);
 
 std::unique_ptr<Program> CompileAndLinkProgram(
     const std::string& name, std::span<std::string> sourceNames,
@@ -63,7 +83,7 @@ std::unique_ptr<Program> CompileAndLinkProgram(
 
 std::string BuildDefinesBlock(std::span<std::string> defines);
 std::string GetShaderLog(unsigned int handle);
-std::string GetProgramError(unsigned int handle);
+std::string GetProgramLog(unsigned int handle);
 
 struct UniformInfo {
     GLenum      type;
