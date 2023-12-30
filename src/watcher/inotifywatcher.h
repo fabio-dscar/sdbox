@@ -14,18 +14,28 @@ namespace sdbox {
 constexpr auto EventStructSize = sizeof(inotify_event);
 constexpr auto MaxEventSize    = sizeof(inotify_event) + NAME_MAX + 1;
 
-constexpr std::uint32_t EventMask = IN_MOVE | IN_CREATE | IN_CLOSE_WRITE | IN_DELETE;
+constexpr std::uint32_t EventMask =
+    IN_MOVE | IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_DELETE_SELF;
 
 class InotifyWatcher : public DirectoryWatcher {
 public:
-    InotifyWatcher(const fs::path& path);
+    InotifyWatcher();
+    InotifyWatcher(const fs::path& dirPath);
     ~InotifyWatcher() { cleanup(); }
 
     void init() override;
     void watch() override;
     void stop() override;
 
+    void addDirectory(const fs::path& dirPath) override;
+    void removeDirectory(const fs::path& dirPath) override;
+
 private:
+    void removeWatch(int handle);
+
+    std::string getDirPath(int handle) const;
+    int         getDirHandle(const std::string& dirPath) const;
+
     WatcherEvent createEvent(const inotify_event& ev);
 
     std::size_t readPoll();
@@ -50,9 +60,10 @@ private:
     std::mutex stopMutex;
     bool       stopped = false;
 
-    int inotifyFd   = -1;
-    int epollFd     = -1;
-    int watchHandle = -1;
+    int inotifyFd = -1;
+    int epollFd   = -1;
+
+    std::map<int, std::string> watchHandles;
 
     int error;
 };

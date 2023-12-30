@@ -27,12 +27,14 @@ EventType MaskToEventType(std::uint32_t mask) {
     return Unknown;
 }
 
-InotifyWatcher::InotifyWatcher(const fs::path& path) : DirectoryWatcher(path) {
-    if (!fs::exists(dirPath))
-        FATAL("Path {} does not exist.", dirPath.string());
+InotifyWatcher::InotifyWatcher() : DirectoryWatcher() {
+    inotifyFd = inotify_init1(IN_NONBLOCK);
+    if (inotifyFd == -1)
+        FATAL("Failed to initialize inotify. {}", std::strerror(errno));
+}
 
-    if (!fs::is_directory(dirPath))
-        FATAL("Provided path is not a directory.");
+InotifyWatcher::InotifyWatcher(const fs::path& dirPath) : InotifyWatcher() {
+    addDirectory(dirPath);
 }
 
 void InotifyWatcher::cleanup() {
@@ -48,32 +50,51 @@ void InotifyWatcher::cleanup() {
 }
 
 void InotifyWatcher::init() {
-    inotifyFd = inotify_init1(IN_NONBLOCK);
-    if (inotifyFd == -1)
-        FATAL("Failed to initialize inotify. {}", strerror(errno));
-
     if (pipe2(stopPipeFd.data(), O_NONBLOCK) == -1)
-        FATAL("Failed to create stop pipe. {}", strerror(errno));
+        FATAL("Failed to create stop pipe. {}", std::strerror(errno));
 
-    // Create notification facility for both descriptors
+    // Create notification facility for both pipe and inotify descriptors
     epollFd = epoll_create1(0);
     if (epollFd == -1)
-        FATAL("Can't create epoll. {}", strerror(errno));
+        FATAL("Can't create epoll. {}", std::strerror(errno));
 
     inotifyEv.data.fd = inotifyFd;
     inotifyEv.events  = EPOLLET | EPOLLIN;
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, inotifyFd, &inotifyEv) == -1)
-        FATAL("Failed to add inotfy's fd to epoll. {}", strerror(errno));
+        FATAL("Failed to add inotfy's fd to epoll. {}", std::strerror(errno));
 
     stopPipeEv.data.fd = stopPipeFd[PipeRead];
     stopPipeEv.events  = EPOLLET | EPOLLIN;
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, stopPipeFd[PipeRead], &stopPipeEv) == -1)
-        FATAL("Failed to add stop pipe's fd to epoll. {}", strerror(errno));
+        FATAL("Failed to add stop pipe's fd to epoll. {}", std::strerror(errno));
+}
+
+void InotifyWatcher::addDirectory(const fs::path& dirPath) {
+    if (!fs::exists(dirPath))
+        FATAL("Path {} does not exist.", dirPath.string());
+
+    if (!fs::is_directory(dirPath))
+        FATAL("Provided path {} is not a directory.", dirPath.string());
 
     // Add directory to watches
-    watchHandle = inotify_add_watch(inotifyFd, dirPath.c_str(), EventMask);
-    if (watchHandle == -1)
+    int handle = inotify_add_watch(inotifyFd, dirPath.c_str(), EventMask);
+    if (handle == -1)
         FATAL("Failed to create a watch for {}.", dirPath.string());
+
+    watchHandles[handle] = dirPath;
+}
+
+void InotifyWatcher::removeWatch(int handle) {
+    if (inotify_rm_watch(inotifyFd, handle) == -1)
+        LOG_ERROR("Failed to remove watch for {}.", getDirPath(handle));
+
+    watchHandles.erase(handle);
+}
+
+void InotifyWatcher::removeDirectory(const fs::path& dirPath) {
+    auto handle = getDirHandle(dirPath);
+    if (handle != -1)
+        removeWatch(handle);
 }
 
 std::size_t InotifyWatcher::readPoll() {
@@ -85,18 +106,37 @@ std::size_t InotifyWatcher::readPoll() {
 
     auto sizeRead = read(epollEvent.data.fd, readBuffer.data(), readBuffer.size());
     if (sizeRead == -1) {
-        writeToErrorCallback(strerror(errno));
+        writeToErrorCallback(std::strerror(errno));
         return 0;
     }
 
     return sizeRead;
 }
 
+int InotifyWatcher::getDirHandle(const std::string& dirPath) const {
+    for (const auto& [handle, path] : watchHandles)
+        if (path == dirPath)
+            return handle;
+
+    LOG_WARN("Couldn't find watch handle for {}.", dirPath);
+    return -1;
+}
+
+std::string InotifyWatcher::getDirPath(int handle) const {
+    auto it = watchHandles.find(handle);
+    if (it != watchHandles.end())
+        return it->second;
+
+    LOG_WARN("Trying to query folder to unknown handle");
+    return "";
+}
+
 WatcherEvent InotifyWatcher::createEvent(const inotify_event& ev) {
     WatcherEvent event;
-    event.type  = MaskToEventType(ev.mask);
-    event.name  = ev.name;
-    event.isDir = ev.mask & IN_ISDIR;
+    event.type    = MaskToEventType(ev.mask);
+    event.name    = ev.name;
+    event.isDir   = ev.mask & IN_ISDIR;
+    event.dirPath = getDirPath(ev.wd);
 
     if (event.type == EventType::FileMoved) {
         auto it = renameMap.find(ev.cookie);
@@ -112,14 +152,14 @@ WatcherEvent InotifyWatcher::createEvent(const inotify_event& ev) {
 bool InotifyWatcher::filterEvent(const inotify_event& ev) {
     std::string fname = ev.name;
 
+    if (ev.mask & IN_DELETE_SELF) {
+        LOGI("Stopped watching {}. Folder was deleted.", getDirPath(ev.wd));
+        watchHandles.erase(ev.wd);
+        return true;
+    }
+
     if (ev.mask & IN_IGNORED) {
-        {
-            std::lock_guard lock{stopMutex};
-            stopped = true;
-        }
-
-        writeToErrorCallback("Directory got IN_IGNORED; Stopping directory monitoring.");
-
+        watchHandles.erase(ev.wd);
         return true;
     }
 
@@ -129,12 +169,8 @@ bool InotifyWatcher::filterEvent(const inotify_event& ev) {
         return true;
     }
 
-    // Ignore dotfiles
-    if (fname.starts_with("."))
-        return true;
-
-    // Ignore temp files created by text editors
-    if (fname.ends_with("~"))
+    // Ignore dotfiles and temp files created by text editors
+    if (fname.starts_with(".") || fname.ends_with("~"))
         return true;
 
     // If it has any of the used masks, don't filter

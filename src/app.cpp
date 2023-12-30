@@ -81,7 +81,7 @@ std::optional<Resource<Shader>> LoadShaderResource(const fs::path& path, Resourc
     const auto nameHash = HashBytes64(fileName);
     const auto srcHash  = HashBytes64(shader->getSource());
     if (reg.exists<Shader>(nameHash, srcHash) || !shader->compile()) {
-        LOGI("[Shader] Leaving early... {}", srcHash);
+        LOGD("[Shader] Leaving early... {}", srcHash);
         return std::nullopt;
     }
 

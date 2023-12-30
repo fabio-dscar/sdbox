@@ -39,6 +39,7 @@ inline std::ostream& operator<<(std::ostream& stream, const EventType& type) {
 }
 
 struct WatcherEvent {
+    std::string dirPath;
     std::string name;
     std::string oldName;
     EventType   type;
@@ -52,6 +53,7 @@ inline std::ostream& operator<<(std::ostream& stream, const WatcherEvent& ev) {
     if (ev.type == EventType::FileMoved)
         stream << "Old Name: " << ev.oldName << '\n';
     stream << "Is Dir: " << ev.isDir << '\n';
+    stream << "Dir: " << ev.dirPath << '\n';
 
     return stream;
 }
@@ -61,12 +63,15 @@ using ErrorCallback = std::function<void(const std::string&)>;
 
 class DirectoryWatcher {
 public:
-    DirectoryWatcher(const fs::path& dirPath) : dirPath(dirPath) {}
+    DirectoryWatcher()          = default;
     virtual ~DirectoryWatcher() = default;
 
     virtual void init()  = 0;
     virtual void watch() = 0;
     virtual void stop()  = 0;
+
+    virtual void addDirectory(const fs::path& dirPath)    = 0;
+    virtual void removeDirectory(const fs::path& dirPath) = 0;
 
     void registerCallback(EventType type, EventCallback&& callback) {
         callbacks.emplace(type, std::move(callback));
@@ -86,13 +91,11 @@ protected:
 
     bool hasCallback(EventType type) const { return callbacks.find(type) != callbacks.end(); }
 
-    fs::path dirPath = "";
-
     ErrorCallback                      errorCallback = nullptr;
     std::map<EventType, EventCallback> callbacks;
 };
 
-std::unique_ptr<DirectoryWatcher> CreateDirectoryWatcher(const fs::path& path);
+std::unique_ptr<DirectoryWatcher> CreateDirectoryWatcher(const fs::path& dirPath);
 
 } // namespace sdbox
 
