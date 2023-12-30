@@ -28,7 +28,7 @@ namespace fs = std::filesystem;
 
 namespace sdbox {
 
-struct alignas(256) MainUniformBlock {
+struct MainUniformBlock {
     glm::vec4 uMouse;      // xy = current, zw = click
     glm::vec3 uResolution; // Viewport res
     float     uTime;       // Shader playback (seconds)
@@ -50,11 +50,11 @@ public:
 
 private:
     void setProgram();
-    void loadInitialShaders(const fs::path& folderPath);
 
     void resetTime() {
         time      = 0.0;
         deltaTime = 0.0;
+        frameNum  = 0;
 
         glfwSetTime(0.0);
     }
@@ -65,6 +65,8 @@ private:
         deltaTime = timeSinceStart - time;
         time      = timeSinceStart;
         fps       = 0.5 * fps + 0.5 / deltaTime;
+
+        ++frameNum;
     }
 
     void setWinCallbacks();
@@ -79,9 +81,10 @@ private:
         }
     }
 
-    void createDirectoryWatcher(const fs::path& folderPath);
     void createUniforms();
     void createThreadPool();
+    void createDirectoryWatcher(const fs::path& folderPath);
+    void loadInitialShaders(const fs::path& folderPath);
 
     Window win;
 
@@ -101,6 +104,8 @@ private:
     std::array<OpenglContext*, NumWorkers> sharedCtxs;
 
     ResourceRegistry res;
+
+    Resource<Program> mainProg;
 };
 
 } // namespace sdbox

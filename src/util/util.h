@@ -41,11 +41,11 @@ consteval HashResult64 Hash(std::string str) {
     return constexpr_xxh3::XXH3_64bits_const(str);
 }
 
-inline constexpr HashResult64 HashBytes64(const std::byte* bytes, std::size_t len) {
+inline HashResult64 HashBytes64(const std::byte* bytes, std::size_t len) {
     return xxh::xxhash3<64>(bytes, len);
 }
 
-inline constexpr HashResult64 HashBytes64(const std::string& str) {
+inline HashResult64 HashBytes64(const std::string& str) {
     return xxh::xxhash3<64>(str);
 }
 

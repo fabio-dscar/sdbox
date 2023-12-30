@@ -10,6 +10,19 @@
 using namespace sdbox;
 using namespace std::filesystem;
 
+Shader::Shader(const std::string& name, ShaderType type, const std::string& src)
+    : name(name), source(src), type(type) {
+    handle = glCreateShader(type);
+    if (handle == 0) {
+        LOG_ERROR("Could not create shader {}", name);
+    } else {
+        if (!hasVersionDir())
+            setVersion(DefaultVer);
+
+        handleIncludes();
+    }
+}
+
 void Shader::handleIncludes() {
     std::regex  rgx(R"([ ]*#[ ]*include[ ]+[\"<](.*)[\">].*)");
     std::smatch smatch;
@@ -28,19 +41,6 @@ void Shader::handleIncludes() {
         source.replace(smatch.position(), smatch.length(), src.value());
 
         processed.push_back(file);
-    }
-}
-
-Shader::Shader(const std::string& name, ShaderType type, const std::string& src)
-    : name(name), source(src), type(type) {
-    handle = glCreateShader(type);
-    if (handle == 0) {
-        LOG_ERROR("Could not create shader {}", name);
-    } else {
-        if (!hasVersionDir())
-            setVersion(DefaultVer);
-
-        handleIncludes();
     }
 }
 
@@ -80,8 +80,6 @@ void Shader::include(const std::string& include) {
 
     source.insert(end + 1, include);
 }
-
-using namespace std::literals;
 
 bool Shader::compile(const std::string& defines) {
     if (!isValid()) {
@@ -148,6 +146,17 @@ bool Program::link() {
     return true;
 }
 
+ProgramBinary Program::getBinary() const {
+    GLint binSize;
+    glGetProgramiv(handle, GL_PROGRAM_BINARY_LENGTH, &binSize);
+
+    ProgramBinary bin;
+    bin.data = std::make_unique<std::byte[]>(binSize);
+    glGetProgramBinary(handle, binSize, &bin.size, &bin.format, bin.data.get());
+
+    return bin;
+}
+
 void Program::cleanShaders() {
     for (auto sid : srcHandles)
         if (glIsShader(sid) == GL_TRUE)
@@ -210,11 +219,8 @@ std::unique_ptr<Shader> sdbox::LoadShaderFile(ShaderType type, const fs::path& f
 std::string sdbox::BuildDefinesBlock(std::span<std::string> defines) {
     std::string defBlock = "";
     for (auto& def : defines) {
-        if (!def.empty()) {
-            defBlock.append("#define ");
-            defBlock.append(def.begin(), def.end());
-            defBlock.append("\n");
-        }
+        if (!def.empty())
+            defBlock.append(std::format("#define {}\n", def));
     }
     return defBlock;
 }

@@ -50,6 +50,12 @@ private:
     unsigned int handle = 0;
 };
 
+struct ProgramBinary {
+    int                          size;
+    unsigned int                 format;
+    std::unique_ptr<std::byte[]> data;
+};
+
 class Program {
 public:
     explicit Program(const std::string& name);
@@ -62,6 +68,8 @@ public:
     bool link();
     bool isValid() const { return handle > 0; }
     void cleanShaders();
+
+    ProgramBinary getBinary() const;
 
 private:
     std::vector<unsigned int> srcHandles;

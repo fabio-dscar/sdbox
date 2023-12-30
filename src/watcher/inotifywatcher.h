@@ -18,7 +18,7 @@ constexpr std::uint32_t EventMask = IN_MOVE | IN_CREATE | IN_CLOSE_WRITE | IN_DE
 
 class InotifyWatcher : public DirectoryWatcher {
 public:
-    InotifyWatcher(const std::filesystem::path& path);
+    InotifyWatcher(const fs::path& path);
     ~InotifyWatcher() { cleanup(); }
 
     void init() override;
@@ -26,7 +26,7 @@ public:
     void stop() override;
 
 private:
-    std::optional<WatcherEvent> createEvent(const inotify_event& ev);
+    WatcherEvent createEvent(const inotify_event& ev);
 
     std::size_t readPoll();
     void        readFromBuffer(std::size_t size);

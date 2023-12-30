@@ -4,6 +4,6 @@
 
 using namespace sdbox;
 
-std::unique_ptr<DirectoryWatcher> sdbox::CreateDirectoryWatcher(const std::filesystem::path& path) {
+std::unique_ptr<DirectoryWatcher> sdbox::CreateDirectoryWatcher(const fs::path& path) {
     return std::make_unique<InotifyWatcher>(path);
 }

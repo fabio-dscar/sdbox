@@ -7,11 +7,13 @@
 #include <functional>
 #include <ostream>
 
+namespace fs = std::filesystem;
+
 namespace sdbox {
 
 class InotifyWatcher;
 
-enum class EventType { FileCreated, FileDeleted, FileChanged, FileMoved };
+enum class EventType { Unknown, FileCreated, FileDeleted, FileChanged, FileMoved };
 
 inline std::ostream& operator<<(std::ostream& stream, const EventType& type) {
     using enum EventType;
@@ -27,6 +29,9 @@ inline std::ostream& operator<<(std::ostream& stream, const EventType& type) {
         break;
     case FileMoved:
         stream << "Moved";
+        break;
+    case Unknown:
+        stream << "Unknown";
         break;
     }
 
@@ -56,7 +61,7 @@ using ErrorCallback = std::function<void(const std::string&)>;
 
 class DirectoryWatcher {
 public:
-    DirectoryWatcher(const std::filesystem::path& dirPath) : dirPath(dirPath) {}
+    DirectoryWatcher(const fs::path& dirPath) : dirPath(dirPath) {}
     virtual ~DirectoryWatcher() = default;
 
     virtual void init()  = 0;
@@ -81,13 +86,13 @@ protected:
 
     bool hasCallback(EventType type) const { return callbacks.find(type) != callbacks.end(); }
 
-    std::filesystem::path dirPath = "";
+    fs::path dirPath = "";
 
     ErrorCallback                      errorCallback = nullptr;
     std::map<EventType, EventCallback> callbacks;
 };
 
-std::unique_ptr<DirectoryWatcher> CreateDirectoryWatcher(const std::filesystem::path& path);
+std::unique_ptr<DirectoryWatcher> CreateDirectoryWatcher(const fs::path& path);
 
 } // namespace sdbox
 

@@ -42,18 +42,16 @@ using Shared = std::shared_ptr<T>;
 template<typename T>
 using Unique = std::unique_ptr<T>;
 
-using NameHash = HashResult;
-
 template<typename ResType>
 struct Resource {
     std::string     name;
-    NameHash        nameHash;
+    HashResult      nameHash;
     HashResult      hash;
     Shared<ResType> resource;
 };
 
 template<class ResType>
-Resource(std::string, NameHash, HashResult, Unique<ResType>&&) -> Resource<ResType>;
+Resource(std::string, HashResult, HashResult, Unique<ResType>&&) -> Resource<ResType>;
 
 template<typename T>
 using ResourceMap = Map<HashResult, Resource<T>>;
@@ -77,7 +75,7 @@ public:
     }
 
     template<typename T>
-    std::optional<Resource<T>> getResource(NameHash hash) {
+    std::optional<Resource<T>> getResource(HashResult hash) {
         if constexpr (std::is_same<Shader, T>())
             return getResource(hash, shaders);
         else if constexpr (std::is_same<Program, T>())
@@ -87,14 +85,14 @@ public:
     }
 
     template<typename T>
-    bool exists(NameHash nameHash, HashResult hash) {
+    bool exists(HashResult nameHash, HashResult hash) {
         const auto opt = getResource<T>(nameHash);
         return opt && opt.value().hash == hash;
     }
 
 private:
     template<typename T>
-    std::optional<Resource<T>> getResource(NameHash hash, ResourceMap<T>& map) {
+    std::optional<Resource<T>> getResource(HashResult hash, ResourceMap<T>& map) {
         std::lock_guard lock{map.mutex};
 
         auto it = map.map.find(hash);

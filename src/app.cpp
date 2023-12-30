@@ -33,13 +33,8 @@ Window InitOpenGL(const WindowOpts& winOpts) {
     LOGI("GLSL Version: {}", glslVer);
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glDepthMask(GL_TRUE);
-    glDepthRange(0.0, 1.0);
-    glClearDepth(1.0);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
+    glDisable(GL_STENCIL_TEST);
+    glDisable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     return win;
@@ -73,7 +68,7 @@ void RebuildProgram(const Resource<Shader>& sh, ResourceRegistry& reg) {
     for (int s = 0; s < 8; ++s)
         glProgramUniform1i(prog->id(), s, s);
 
-    reg.addResource(Resource<Program>{sh.name, sh.nameHash, 0, std::move(prog)});
+    reg.addResource(Resource{sh.name, sh.nameHash, sh.hash, std::move(prog)});
 }
 
 std::optional<Resource<Shader>> LoadShaderResource(const fs::path& path, ResourceRegistry& reg) {
@@ -85,8 +80,10 @@ std::optional<Resource<Shader>> LoadShaderResource(const fs::path& path, Resourc
 
     const auto nameHash = HashBytes64(fileName);
     const auto srcHash  = HashBytes64(shader->getSource());
-    if (reg.exists<Shader>(nameHash, srcHash) || !shader->compile())
+    if (reg.exists<Shader>(nameHash, srcHash) || !shader->compile()) {
+        LOGI("[Shader] Leaving early... {}", srcHash);
         return std::nullopt;
+    }
 
     auto resource = Resource{fileName, nameHash, srcHash, std::move(shader)};
     reg.addResource(resource);
@@ -95,12 +92,16 @@ std::optional<Resource<Shader>> LoadShaderResource(const fs::path& path, Resourc
 }
 
 void SdboxApp::createDirectoryWatcher(const fs::path& folderPath) {
-    auto watcherCallback = [&](const WatcherEvent& ev) {
+    auto errorCallback = [](const std::string& err) {
+        LOG_ERROR("{}", err);
+    };
+
+    auto watcherCallback = [](const WatcherEvent& ev) {
         std::cout << ev << '\n';
     };
 
     auto fileChanged = [&](const WatcherEvent& ev) {
-        workers->enqueue([=]() {
+        workers->enqueue([&, ev]() {
             if (!IsBuiltinName(ev.name))
                 return;
 
@@ -117,6 +118,7 @@ void SdboxApp::createDirectoryWatcher(const fs::path& folderPath) {
     watcher->registerCallback(FileMoved, watcherCallback);
     watcher->registerCallback(FileDeleted, watcherCallback);
     watcher->registerCallback(FileChanged, fileChanged);
+    watcher->registerErrorCallback(errorCallback);
     watcher->init();
 
     std::thread watcherThread{[&]() {
@@ -153,7 +155,7 @@ void SdboxApp::loadInitialShaders(const fs::path& folderPath) {
 
     auto main = LoadShaderResource(folderPath / "main.glsl", res);
     if (!main)
-        FATAL("Make sure there is a main.glsl file on the specified folder.");
+        FATAL("Make sure there is a valid main.glsl file on the specified folder.");
 
     RebuildProgram(*main, res);
 }
@@ -223,8 +225,11 @@ void SdboxApp::setUniforms() {
 
 void SdboxApp::setProgram() {
     auto prog = res.getResource<Program>(Hash("main.glsl"));
-    if (prog)
-        glUseProgram(prog.value().resource->id());
+    if (prog && prog->hash != mainProg.hash) {
+        mainProg = prog.value();
+        glUseProgram(mainProg.resource->id());
+        resetTime();
+    }
 }
 
 void SdboxApp::render() {
@@ -246,10 +251,8 @@ void SdboxApp::loop() {
     while (!glfwWindowShouldClose(win.context())) {
         render();
 
-        if (!paused) {
+        if (!paused)
             updateTime();
-            ++frameNum;
-        }
 
         win.swapBuffers();
         win.pollEvents();

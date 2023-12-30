@@ -9,12 +9,10 @@
 
 using namespace sdbox;
 
-namespace fs = std::filesystem;
-
 constexpr auto PipeRead  = 0;
 constexpr auto PipeWrite = 1;
 
-std::optional<EventType> MaskToEventType(std::uint32_t mask) {
+EventType MaskToEventType(std::uint32_t mask) {
     using enum sdbox::EventType;
 
     if (mask & IN_MOVED_TO)
@@ -26,10 +24,10 @@ std::optional<EventType> MaskToEventType(std::uint32_t mask) {
     else if (mask & IN_CLOSE_WRITE)
         return FileChanged;
 
-    return std::nullopt;
+    return Unknown;
 }
 
-InotifyWatcher::InotifyWatcher(const std::filesystem::path& path) : DirectoryWatcher(path) {
+InotifyWatcher::InotifyWatcher(const fs::path& path) : DirectoryWatcher(path) {
     if (!fs::exists(dirPath))
         FATAL("Path {} does not exist.", dirPath.string());
 
@@ -94,13 +92,9 @@ std::size_t InotifyWatcher::readPoll() {
     return sizeRead;
 }
 
-std::optional<WatcherEvent> InotifyWatcher::createEvent(const inotify_event& ev) {
-    auto type = MaskToEventType(ev.mask);
-    if (!type.has_value())
-        return std::nullopt;
-
+WatcherEvent InotifyWatcher::createEvent(const inotify_event& ev) {
     WatcherEvent event;
-    event.type  = type.value();
+    event.type  = MaskToEventType(ev.mask);
     event.name  = ev.name;
     event.isDir = ev.mask & IN_ISDIR;
 
@@ -154,8 +148,7 @@ void InotifyWatcher::readFromBuffer(std::size_t size) {
 
         if (!filterEvent(*notifEv)) {
             auto newEvent = createEvent(*notifEv);
-            if (newEvent.has_value())
-                eventQueue.push(newEvent.value());
+            eventQueue.push(newEvent);
         }
 
         i += EventStructSize + notifEv->len;
