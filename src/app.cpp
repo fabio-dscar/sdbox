@@ -5,8 +5,6 @@
 using namespace sdbox;
 using namespace std::literals;
 
-static std::unique_ptr<Program> program;
-
 Window InitOpenGL(const WindowOpts& winOpts) {
     if (!glfwInit())
         FATAL("Couldn't initialize OpenGL context.");

@@ -37,7 +37,7 @@ struct MainUniformBlock {
     int       uFrame;      // Number of the frame
 };
 
-static constexpr int NumWorkers = 2;
+constexpr int NumWorkers = 2;
 
 class SdboxApp {
 public:

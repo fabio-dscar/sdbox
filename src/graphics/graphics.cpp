@@ -2,7 +2,9 @@
 
 using namespace sdbox;
 
-static GLuint QuadVao, QuadVbo;
+namespace {
+GLuint QuadVao, QuadVbo;
+}
 
 void sdbox::RenderQuad() {
     if (QuadVao == 0) {
@@ -15,12 +17,13 @@ void sdbox::RenderQuad() {
 
         glCreateVertexArrays(1, &QuadVao);
         glCreateBuffers(1, &QuadVbo);
-        glEnableVertexArrayAttrib(QuadVao, 0);
         glVertexArrayVertexBuffer(QuadVao, 0, QuadVbo, 0, vertexSize);
+        glEnableVertexArrayAttrib(QuadVao, 0);
+        glVertexArrayAttribBinding(QuadVao, 0, 0);
         glVertexArrayAttribFormat(QuadVao, 0, 3, GL_FLOAT, GL_FALSE, 0);
         glEnableVertexArrayAttrib(QuadVao, 1);
-        glVertexArrayVertexBuffer(QuadVao, 1, QuadVbo, 3 * sizeof(float), vertexSize);
-        glVertexArrayAttribFormat(QuadVao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+        glVertexArrayAttribBinding(QuadVao, 1, 0);
+        glVertexArrayAttribFormat(QuadVao, 1, 2, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
         glNamedBufferStorage(QuadVbo, sizeof(quadVertices), &quadVertices, 0);
     }
 

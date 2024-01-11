@@ -1,18 +1,31 @@
 #include <shader.h>
 
-#include <regex>
-#include <iostream>
+#include <glad/glad.h>
 
 #include <util.h>
-
 #include <check.h>
+
+#include <regex>
 
 using namespace sdbox;
 using namespace std::filesystem;
 
+namespace {
+
+const std::string           DefaultVer   = "460 core";
+
+} // namespace
+
+enum class sdbox::ShaderType : unsigned int {
+    Vertex   = GL_VERTEX_SHADER,
+    Fragment = GL_FRAGMENT_SHADER,
+    Geometry = GL_GEOMETRY_SHADER,
+    Compute  = GL_COMPUTE_SHADER
+};
+
 Shader::Shader(const std::string& name, ShaderType type, const std::string& src)
     : name(name), source(src), type(type) {
-    handle = glCreateShader(type);
+    handle = glCreateShader(static_cast<GLenum>(type));
     if (handle == 0) {
         LOG_ERROR("Could not create shader {}", name);
     } else {
@@ -21,6 +34,11 @@ Shader::Shader(const std::string& name, ShaderType type, const std::string& src)
 
         handleIncludes();
     }
+}
+
+Shader::~Shader() {
+    if (handle > 0)
+        glDeleteShader(handle);
 }
 
 void Shader::handleIncludes() {
@@ -33,7 +51,7 @@ void Shader::handleIncludes() {
         if (std::find(processed.begin(), processed.end(), file) != processed.end())
             FATAL("Repeated/Recursively including '{}' at '{}'.", file, name);
 
-        auto filePath = ShaderFolder / file;
+        auto filePath = ShaderFolder / file; // TODO: Improve this by going through shader parent
         auto src      = util::ReadTextFile(filePath);
         if (!src)
             FATAL("Couldn't open included shader '{}' in '{}'", file, name);
@@ -186,13 +204,13 @@ std::string sdbox::GetProgramLog(unsigned int handle) {
 ShaderType sdbox::DeduceShaderType(const std::string& fileName) {
     auto ext = std::filesystem::path(fileName).extension();
     if (ext == ".frag" || ext == ".fs" || ext == ".glsl")
-        return Fragment;
+        return ShaderType::Fragment;
     else if (ext == ".vert" || ext == ".vs")
-        return Vertex;
+        return ShaderType::Vertex;
 
     LOG_WARN(
         "Couldn't deduce type for shader: {}. Choosing 'fragment' shader by default.", fileName);
-    return Fragment;
+    return ShaderType::Fragment;
 }
 
 std::unique_ptr<Shader>
@@ -202,10 +220,10 @@ LoadShaderFromMemory(const std::string& name, const char* bytes, std::size_t siz
     return std::make_unique<Shader>(name, type, contents);
 }
 
-std::unique_ptr<Shader> sdbox::LoadShaderFile(const fs::path& fileName) {
+std::unique_ptr<Shader> sdbox::LoadShaderFile(const fs::path& filePath) {
     // Deduce type from extension, if possible
-    auto type = DeduceShaderType(fileName);
-    return LoadShaderFile(type, fileName);
+    auto type = DeduceShaderType(filePath);
+    return LoadShaderFile(type, filePath);
 }
 
 std::unique_ptr<Shader> sdbox::LoadShaderFile(ShaderType type, const fs::path& filePath) {

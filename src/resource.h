@@ -15,11 +15,11 @@ class Shader;
 class Program;
 class Texture;
 
-static const std::unordered_set BuiltinNames = {
-    Hash("main.glsl"), Hash("texture0"), Hash("texture1"), Hash("texture2"), Hash("texture3"),
-    Hash("cube0"),     Hash("cube1"),    Hash("cube2"),    Hash("cube3")};
+const std::unordered_set BuiltinNames = {Hash("main.glsl"), Hash("texture0"), Hash("texture1"),
+                                         Hash("texture2"),  Hash("texture3"), Hash("cube0"),
+                                         Hash("cube1"),     Hash("cube2"),    Hash("cube3")};
 
-static const std::unordered_set TextureFormats = {
+const std::unordered_set TextureFormats = {
     Hash("exr"), Hash("hdr"), Hash("png"), Hash("jpeg"), Hash("jpg")};
 
 inline bool IsBuiltinName(const std::string& str) {
@@ -33,7 +33,7 @@ inline bool IsTexture(const std::string& ext) {
 template<typename KT, typename VT>
 struct Map {
     std::unordered_map<KT, VT> map;
-    std::mutex                 mutex;
+    mutable std::mutex         mutex;
 };
 
 template<typename T>
@@ -60,39 +60,39 @@ class ResourceRegistry {
 public:
     template<typename T>
     void addResource(Resource<T> res) {
-        if constexpr (std::is_same<Shader, T>())
+        if constexpr (std::is_same_v<Shader, T>)
             return addResource(std::move(res), shaders);
-        else if constexpr (std::is_same<Program, T>())
+        else if constexpr (std::is_same_v<Program, T>)
             return addResource(std::move(res), programs);
-        else if constexpr (std::is_same<Texture, T>())
+        else if constexpr (std::is_same_v<Texture, T>)
             return addResource(std::move(res), textures);
     }
 
     template<typename T>
-    std::optional<Resource<T>> getResource(const std::string& name) {
+    std::optional<Resource<T>> getResource(const std::string& name) const {
         auto hash = util::HashBytes64(name);
         return getResource<T>(hash);
     }
 
     template<typename T>
-    std::optional<Resource<T>> getResource(HashResult hash) {
-        if constexpr (std::is_same<Shader, T>())
+    std::optional<Resource<T>> getResource(HashResult hash) const {
+        if constexpr (std::is_same_v<Shader, T>)
             return getResource(hash, shaders);
-        else if constexpr (std::is_same<Program, T>())
+        else if constexpr (std::is_same_v<Program, T>)
             return getResource(hash, programs);
-        else if constexpr (std::is_same<Texture, T>())
+        else if constexpr (std::is_same_v<Texture, T>)
             return getResource(hash, textures);
     }
 
     template<typename T>
-    bool exists(HashResult nameHash, HashResult hash) {
+    bool exists(HashResult nameHash, HashResult hash) const {
         const auto opt = getResource<T>(nameHash);
         return opt && opt.value().hash == hash;
     }
 
 private:
     template<typename T>
-    std::optional<Resource<T>> getResource(HashResult hash, ResourceMap<T>& map) {
+    std::optional<Resource<T>> getResource(HashResult hash, const ResourceMap<T>& map) const {
         std::lock_guard lock{map.mutex};
 
         auto it = map.map.find(hash);

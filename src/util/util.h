@@ -9,6 +9,8 @@
 #include <xxhash/xxhash.hpp>
 #include <xxhash/constexpr-xxh3.h>
 
+namespace fs = std::filesystem;
+
 namespace sdbox {
 namespace util {
 
@@ -27,8 +29,8 @@ struct BinaryData {
     std::unique_ptr<std::byte[]> data;
 };
 
-std::optional<std::string> ReadTextFile(const std::string& filePath);
-std::optional<BinaryData>  ReadBinaryFile(const std::string& filePath);
+std::optional<std::string> ReadTextFile(const fs::path& filePath);
+std::optional<BinaryData>  ReadBinaryFile(const fs::path& filePath);
 
 // ------------------------------------------------------------------
 //     Hash functions

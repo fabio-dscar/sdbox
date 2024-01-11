@@ -20,7 +20,7 @@ struct MouseState {
     std::array<KeyState, 3> buttons = {KeyState::Released};
 };
 
-static constexpr int MaxKeyNum = GLFW_KEY_LAST;
+constexpr int MaxKeyNum = GLFW_KEY_LAST;
 struct KeyboardState {
     std::array<KeyState, MaxKeyNum> keys = {KeyState::Released};
 };
@@ -90,13 +90,11 @@ public:
     void setCallbacks(WindowCallbacks winCallbacks);
 
 private:
-    int         width    = 32;
-    int         height   = 32;
-    std::string winTitle = "sdbox";
-
-    MouseState    mouse;
-    KeyboardState keyboard;
-
+    int             width    = 32;
+    int             height   = 32;
+    std::string     winTitle = "sdbox";
+    MouseState      mouse;
+    KeyboardState   keyboard;
     WindowCallbacks callbacks;
     OpenglContext*  ctx;
 };

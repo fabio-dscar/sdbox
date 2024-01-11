@@ -2,7 +2,9 @@
 
 using namespace sdbox;
 
-static thread_local std::string ThreadName = "unnamed";
+namespace {
+thread_local std::string ThreadName = "unnamed";
+}
 
 void sdbox::SetThreadName(const std::string& name) {
     ThreadName = name;

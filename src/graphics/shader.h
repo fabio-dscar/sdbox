@@ -3,29 +3,18 @@
 
 #include <sdbox.h>
 
-#include <glad/glad.h>
-
 namespace fs = std::filesystem;
 
 namespace sdbox {
 
-enum ShaderType {
-    Vertex   = GL_VERTEX_SHADER,
-    Fragment = GL_FRAGMENT_SHADER,
-    Geometry = GL_GEOMETRY_SHADER,
-    Compute  = GL_COMPUTE_SHADER
-};
+enum class ShaderType : unsigned int;
 
-static const std::string           DefaultVer   = "460 core";
-static const std::filesystem::path ShaderFolder = "./glsl";
+const std::filesystem::path ShaderFolder = "./glsl";
 
 class Shader {
 public:
     Shader(const std::string& name, ShaderType type, const std::string& src);
-    ~Shader() {
-        if (handle > 0)
-            glDeleteShader(handle);
-    }
+    ~Shader();
 
     unsigned int id() const { return handle; }
 
@@ -93,34 +82,34 @@ std::string BuildDefinesBlock(std::span<std::string> defines);
 std::string GetShaderLog(unsigned int handle);
 std::string GetProgramLog(unsigned int handle);
 
-struct UniformInfo {
-    GLenum      type;
-    std::string name;
-    std::size_t size;
-    int         loc;
-};
+// struct UniformInfo {
+//     GLenum      type;
+//     std::string name;
+//     std::size_t size;
+//     int         loc;
+// };
 
-inline std::vector<UniformInfo> ExtractUniforms(const Program& prog) {
-    GLint count;
-    glGetProgramiv(prog.id(), GL_ACTIVE_UNIFORMS, &count);
+// inline std::vector<UniformInfo> ExtractUniforms(const Program& prog) {
+//     GLint count;
+//     glGetProgramiv(prog.id(), GL_ACTIVE_UNIFORMS, &count);
 
-    std::vector<UniformInfo> uniformList;
-    uniformList.reserve(count);
-    for (int i = 0; i < count; ++i) {
-        GLint  size;
-        GLenum type;
-        GLchar name[256];
+//     std::vector<UniformInfo> uniformList;
+//     uniformList.reserve(count);
+//     for (int i = 0; i < count; ++i) {
+//         GLint  size;
+//         GLenum type;
+//         GLchar name[256];
 
-        glGetActiveUniform(prog.id(), i, 256, NULL, &size, &type, name);
-        GLint loc = glGetUniformLocation(prog.id(), name);
+//         glGetActiveUniform(prog.id(), i, 256, NULL, &size, &type, name);
+//         GLint loc = glGetUniformLocation(prog.id(), name);
 
-        // Exclude uniform block variables
-        if (loc != -1)
-            uniformList.emplace_back(type, name, size, loc);
-    }
+//         // Exclude uniform block variables
+//         if (loc != -1)
+//             uniformList.emplace_back(type, name, size, loc);
+//     }
 
-    return uniformList;
-}
+//     return uniformList;
+// }
 
 } // namespace sdbox
 

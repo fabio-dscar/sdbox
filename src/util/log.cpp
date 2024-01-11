@@ -12,6 +12,7 @@
 
 using namespace sdbox;
 
+namespace {
 class thread_name_flag : public spdlog::custom_flag_formatter {
 public:
     void
@@ -24,6 +25,7 @@ public:
         return spdlog::details::make_unique<thread_name_flag>();
     }
 };
+} // namespace
 
 void sdbox::InitLogger() {
     auto cliFormatter = std::make_unique<spdlog::pattern_formatter>();
@@ -31,7 +33,7 @@ void sdbox::InitLogger() {
     cliFormatter->set_pattern("[%T.%F][%^%l%$][%=20W] %v");
 
     auto console = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console->set_level(spdlog::level::info);
+    console->set_level(spdlog::level::trace);
     console->set_formatter(std::move(cliFormatter));
 
     auto fileFormatter = std::make_unique<spdlog::pattern_formatter>();
