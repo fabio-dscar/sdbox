@@ -18,10 +18,12 @@ set(SDBOX_SOURCES
   src/util/util.cpp
   src/util/log.cpp
   src/util/thread.cpp
+  src/util/image.cpp
   src/graphics/shader.cpp
   src/graphics/graphics.cpp
   src/graphics/buffer.cpp
   src/graphics/ringbuffer.cpp
+  src/graphics/texture.cpp
   src/watcher/watcher.cpp
   src/watcher/inotifywatcher.cpp
   ${GLAD_SOURCES}
