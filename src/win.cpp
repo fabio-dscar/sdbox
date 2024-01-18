@@ -58,8 +58,8 @@ void Window::processMouseClick(int button, int action, int /*mods*/) {
 }
 
 void Window::processMouseMotion(double x, double y) {
-    // double dx = mouse.x - x;
-    // double dy = -(mouse.y - y);
+    mouse.dx = mouse.x - x;
+    mouse.dy = -(mouse.y - y);
 
     mouse.x = x;
     mouse.y = height - y;

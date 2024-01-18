@@ -209,9 +209,9 @@ std::size_t Texture::sizeBytes(unsigned int level) const {
 }
 
 std::size_t Texture::sizeBytesFace(unsigned int level) const {
-    int w = ResizeLvl(width, level);
-    int h = ResizeLvl(height, level);
-    int d = ResizeLvl(depth, level);
+    const auto w = ResizeLvl(width, level);
+    const auto h = ResizeLvl(height, level);
+    const auto d = ResizeLvl(depth, level);
     return ComponentSize(info->pxFmt) * info->numChannels * w * h * d;
 }
 

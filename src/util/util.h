@@ -60,6 +60,31 @@ inline HashResult128 HashBytes128(const std::string& str) {
 }
 
 } // namespace util
+
+// ------------------------------------------------------------------
+//     Scoped Enums
+// ------------------------------------------------------------------
+template<typename T>
+requires(std::is_enum_v<T> and requires(T e) { EnableBitmaskOperators(e); })
+constexpr auto operator|(const T lhs, const T rhs) {
+    using underlying = std::underlying_type_t<T>;
+    return static_cast<T>(static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+}
+
+template<typename T>
+requires(std::is_enum_v<T> and requires(T e) { EnableBitmaskOperators(e); })
+constexpr auto operator&(const T lhs, const T rhs) {
+    using underlying = std::underlying_type_t<T>;
+    return static_cast<T>(static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
+}
+
+template<typename T>
+requires(std::is_enum_v<T> and requires(T e) { EnumHasConversion(e); })
+constexpr auto ToUnderlying(const T enumVal) {
+    using underlying = std::underlying_type_t<T>;
+    return static_cast<underlying>(enumVal);
+}
+
 } // namespace sdbox
 
 #endif // __UTIL_H__

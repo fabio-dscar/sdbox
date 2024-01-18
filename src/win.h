@@ -17,6 +17,8 @@ enum class KeyState : int { Released = 0, Pressed = 1, Repeat = 2 };
 struct MouseState {
     double                  x       = 0.0;
     double                  y       = 0.0;
+    double                  dx      = 0.0;
+    double                  dy      = 0.0;
     std::array<KeyState, 3> buttons = {KeyState::Released};
 };
 
@@ -85,6 +87,7 @@ public:
     void processMouseMotion(double x, double y);
 
     const MouseState&    getMouse() const { return mouse; }
+    const KeyboardState& getKeyboard() const { return keyboard; }
     std::tuple<int, int> getDimensions() const { return {width, height}; }
 
     void setCallbacks(WindowCallbacks winCallbacks);

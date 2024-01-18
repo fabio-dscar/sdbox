@@ -3,10 +3,13 @@
 
 #include <glad/glad.h>
 #include <sdbox.h>
+#include <util.h>
 
 namespace sdbox {
 
 enum class BufferType : unsigned int { Array = 0, Element = 1, Uniform = 2 };
+constexpr bool EnumHasConversion(BufferType);
+
 enum class BufferFlag : unsigned int {
     None          = 0,
     Dynamic       = GL_DYNAMIC_STORAGE_BIT,
@@ -17,20 +20,12 @@ enum class BufferFlag : unsigned int {
     ClientStorage = GL_CLIENT_STORAGE_BIT
 };
 
-inline BufferFlag operator|(BufferFlag lhs, BufferFlag rhs) {
-    auto lflag = static_cast<unsigned int>(lhs);
-    auto rflag = static_cast<unsigned int>(rhs);
-    return static_cast<BufferFlag>(lflag | rflag);
-}
+constexpr bool EnumHasConversion(BufferFlag);
+constexpr bool EnableBitmaskOperators(BufferFlag);
 
 inline bool HasFlag(BufferFlag lhs, BufferFlag rhs) {
-    auto lflag = static_cast<unsigned int>(lhs);
-    auto rflag = static_cast<unsigned int>(rhs);
-    return lflag & rflag;
+    return (lhs & rhs) != BufferFlag::None;
 }
-
-// In nanoseconds
-static constexpr unsigned long FenceTimeout = 1.0 / 30.0 * 1e9;
 
 class Buffer {
 public:
@@ -45,6 +40,7 @@ public:
 
     template<typename T>
     T* get(std::size_t offset = 0) const {
+        CHECK(ptr);
         return reinterpret_cast<T*>(ptr + offset);
     }
 

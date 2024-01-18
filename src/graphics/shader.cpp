@@ -12,7 +12,7 @@ using namespace std::filesystem;
 
 namespace {
 
-const std::string           DefaultVer   = "460 core";
+const std::string DefaultVer = "460 core";
 
 } // namespace
 

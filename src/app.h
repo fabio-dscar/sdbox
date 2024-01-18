@@ -84,7 +84,7 @@ private:
     void createUniforms();
     void createThreadPool();
     void createDirectoryWatcher(const fs::path& folderPath);
-    void loadInitialShaders(const fs::path& folderPath);
+    void loadBaseShaders(const fs::path& folderPath);
 
     Window win;
 

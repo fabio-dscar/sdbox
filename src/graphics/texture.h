@@ -42,7 +42,7 @@ public:
     void setSampler(TexSampler sampler) const;
     void generateMipmaps() const;
 
-    void upload(const Image& image, int lvl = 0) const;
+    void upload(const Image& image, int level = 0) const;
     void upload(const CubeImage& cubemap) const;
 
     ImageFormat format(int level = 0) const;

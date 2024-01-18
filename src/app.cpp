@@ -146,7 +146,7 @@ void SdboxApp::createThreadPool() {
     });
 }
 
-void SdboxApp::loadInitialShaders(const fs::path& folderPath) {
+void SdboxApp::loadBaseShaders(const fs::path& folderPath) {
     auto vert = LoadShaderResource(ShaderFolder / "simple.vert", res);
     auto frag = LoadShaderResource(ShaderFolder / "simple.frag", res);
     CHECK(vert && frag);
@@ -177,8 +177,7 @@ void SdboxApp::init(const fs::path& folderPath) {
     createDirectoryWatcher(folderPath);
     createThreadPool();
     createUniforms();
-
-    loadInitialShaders(folderPath);
+    loadBaseShaders(folderPath);
 }
 
 void SdboxApp::setWinCallbacks() {

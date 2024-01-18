@@ -1,9 +1,13 @@
 #include <buffer.h>
 
 using namespace sdbox;
+using namespace std::chrono;
+using namespace std::chrono_literals;
 
 namespace {
 const GLenum OGLBufferTarget[] = {GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER, GL_UNIFORM_BUFFER};
+
+constexpr nanoseconds FenceTimeout = 33ms;
 }
 
 Buffer::Buffer(BufferType type, std::size_t size, BufferFlag flags, const void* data) {
@@ -36,7 +40,7 @@ void Buffer::bindRange(unsigned int index, std::size_t offset, std::size_t bSize
 }
 
 void SyncedBuffer::wait(GLsync* pSync) {
-    GLenum res = glClientWaitSync(*pSync, 0, FenceTimeout);
+    GLenum res = glClientWaitSync(*pSync, 0, FenceTimeout.count());
     if (res == GL_ALREADY_SIGNALED || res == GL_CONDITION_SATISFIED)
         glDeleteSync(*pSync);
     else
