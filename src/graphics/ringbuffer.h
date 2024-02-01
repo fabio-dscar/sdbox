@@ -1,5 +1,5 @@
-#ifndef __SDBOX_RINGBUFFER_H__
-#define __SDBOX_RINGBUFFER_H__
+#ifndef SDBOX_RINGBUFFER_H
+#define SDBOX_RINGBUFFER_H
 
 #include <buffer.h>
 

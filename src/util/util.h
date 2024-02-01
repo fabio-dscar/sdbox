@@ -1,5 +1,5 @@
-#ifndef __UTIL_H__
-#define __UTIL_H__
+#ifndef SDBOX_UTIL_H
+#define SDBOX_UTIL_H
 
 #include <sdbox.h>
 
@@ -87,4 +87,4 @@ constexpr auto ToUnderlying(const T enumVal) {
 
 } // namespace sdbox
 
-#endif // __UTIL_H__
+#endif

@@ -1,5 +1,5 @@
-#ifndef __SDBOX_WINDOW_H__
-#define __SDBOX_WINDOW_H__
+#ifndef SDBOX_WINDOW_H
+#define SDBOX_WINDOW_H
 
 #include <sdbox.h>
 
@@ -106,4 +106,4 @@ OpenglContext* CreateContext(const WindowOpts& opts);
 
 } // namespace sdbox
 
-#endif // __SDBOX_WINDOW_H__
+#endif

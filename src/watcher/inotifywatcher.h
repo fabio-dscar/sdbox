@@ -1,5 +1,5 @@
-#ifndef __INOTIFYWATCHER_H__
-#define __INOTIFYWATCHER_H__
+#ifndef SDBOX_INOTIFYWATCHER_H
+#define SDBOX_INOTIFYWATCHER_H
 
 #include <watcher/watcher.h>
 
@@ -70,4 +70,4 @@ private:
 
 } // namespace sdbox
 
-#endif // __INOTIFYWATCHER_H__
+#endif

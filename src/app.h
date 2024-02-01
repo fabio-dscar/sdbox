@@ -1,5 +1,5 @@
-#ifndef __SDBOX_APP_H__
-#define __SDBOX_APP_H__
+#ifndef SDBOX_APP_H
+#define SDBOX_APP_H
 
 #include <sdbox.h>
 
@@ -110,4 +110,4 @@ private:
 
 } // namespace sdbox
 
-#endif // __SDBOX_APP_H__
+#endif

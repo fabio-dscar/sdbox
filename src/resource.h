@@ -1,5 +1,5 @@
-#ifndef __SDBOX_RESOURCE_H__
-#define __SDBOX_RESOURCE_H__
+#ifndef SDBOX_RESOURCE_H
+#define SDBOX_RESOURCE_H
 
 #include <sdbox.h>
 #include <util.h>
@@ -115,4 +115,4 @@ private:
 
 } // namespace sdbox
 
-#endif // __SDBOX_RESOURCE_H__
+#endif

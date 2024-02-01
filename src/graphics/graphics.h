@@ -1,5 +1,5 @@
-#ifndef __SDBOX_GRAPHICS_H__
-#define __SDBOX_GRAPHICS_H__
+#ifndef SDBOX_GRAPHICS_H
+#define SDBOX_GRAPHICS_H
 
 #include <glad/glad.h>
 
@@ -23,4 +23,4 @@ void GLAPIENTRY OpenGLErrorCallback(
 
 } // namespace sdbox
 
-#endif // __SDBOX_GRAPHICS_H__
+#endif

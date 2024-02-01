@@ -1,5 +1,5 @@
-#ifndef __SDBOX_TEXTURE_H__
-#define __SDBOX_TEXTURE_H__
+#ifndef SDBOX_TEXTURE_H
+#define SDBOX_TEXTURE_H
 
 #include <sdbox.h>
 #include <image.h>
@@ -78,4 +78,4 @@ inline int MaxMipLevel(int width, int height = 0, int depth = 0) {
 
 } // namespace sdbox
 
-#endif // __SDBOX_TEXTURE_H__
+#endif

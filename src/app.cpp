@@ -149,7 +149,8 @@ void SdboxApp::createThreadPool() {
 void SdboxApp::loadBaseShaders(const fs::path& folderPath) {
     auto vert = LoadShaderResource(ShaderFolder / "simple.vert", res);
     auto frag = LoadShaderResource(ShaderFolder / "simple.frag", res);
-    CHECK(vert && frag);
+    DCHECK(vert.has_value());
+    DCHECK(frag.has_value());
 
     auto main = LoadShaderResource(folderPath / "main.glsl", res);
     if (!main)

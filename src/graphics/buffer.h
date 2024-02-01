@@ -1,5 +1,5 @@
-#ifndef __SDBOX_BUFFER_H__
-#define __SDBOX_BUFFER_H__
+#ifndef SDBOX_BUFFER_H
+#define SDBOX_BUFFER_H
 
 #include <glad/glad.h>
 #include <sdbox.h>
@@ -40,7 +40,7 @@ public:
 
     template<typename T>
     T* get(std::size_t offset = 0) const {
-        CHECK(ptr);
+        DCHECK(HasFlag(flags, BufferFlag::Persistent));
         return reinterpret_cast<T*>(ptr + offset);
     }
 

@@ -1,5 +1,5 @@
-#ifndef __SDBOX_IMAGE_H__
-#define __SDBOX_IMAGE_H__
+#ifndef SDBOX_IMAGE_H
+#define SDBOX_IMAGE_H
 
 #include <sdbox.h>
 #include <variant>
@@ -151,4 +151,4 @@ std::unique_ptr<std::byte[]> ExtractChannel(const ImageView imgView, int c, int 
 
 } // namespace sdbox
 
-#endif // __SDBOX_IMAGE_H__
+#endif

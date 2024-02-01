@@ -1,5 +1,5 @@
-#ifndef __WATCHER_H__
-#define __WATCHER_H__
+#ifndef SDBOX_WATCHER_H
+#define SDBOX_WATCHER_H
 
 #include <sdbox.h>
 
@@ -99,4 +99,4 @@ std::unique_ptr<DirectoryWatcher> CreateDirectoryWatcher(const fs::path& dirPath
 
 } // namespace sdbox
 
-#endif // __WATCHER_H__
+#endif

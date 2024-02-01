@@ -1,5 +1,5 @@
-#ifndef __LOG_H__
-#define __LOG_H__
+#ifndef SDBOX_LOG_H
+#define SDBOX_LOG_H
 
 #define SPDLOG_ACTIVE_LEVEL 0
 #include <spdlog/spdlog.h>
@@ -81,4 +81,4 @@ std::shared_ptr<Logger> GetLogger(const std::string& name);
 
 } // namespace sdbox
 
-#endif // __LOG_H__
+#endif

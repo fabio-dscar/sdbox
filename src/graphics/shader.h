@@ -1,5 +1,5 @@
-#ifndef __IBL_SHADER_H__
-#define __IBL_SHADER_H__
+#ifndef SDBOX_SHADER_H
+#define SDBOX_SHADER_H
 
 #include <sdbox.h>
 
@@ -113,4 +113,4 @@ std::string GetProgramLog(unsigned int handle);
 
 } // namespace sdbox
 
-#endif // __IBL_SHADER_H__
+#endif

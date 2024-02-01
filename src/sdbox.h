@@ -1,5 +1,5 @@
-#ifndef __SDBOX_H__
-#define __SDBOX_H__
+#ifndef SDBOX_H
+#define SDBOX_H
 
 #include <cstdlib>
 #include <cassert>
@@ -24,4 +24,4 @@
     #define THROW_ERROR(...) throw std::runtime_error(std::format(__VA_ARGS__))
 #endif
 
-#endif // __SDBOX_H__
+#endif

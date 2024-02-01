@@ -1,5 +1,5 @@
-#ifndef __CHECK_H__
-#define __CHECK_H__
+#ifndef SDBOX_CHECK_H
+#define SDBOX_CHECK_H
 
 #include <log.h>
 
@@ -21,7 +21,8 @@
         std::abort();           \
     } while (0)
 
-#define CHECK(x) \
+// Verbose check
+#define VCHECK(x) \
     (!(x) ? (LOG_FATAL("CHECK: {}", #x), sdbox::PrintStackTrace(), std::abort(), false) : true)
 
 #define QCHECK(x) (!(x) ? (LOG_FATAL("CHECK: {}", #x), std::abort(), false) : true)
@@ -57,7 +58,7 @@
 #endif
 
 #if defined(DEBUG) && CHECKS_ENABLED
-    #define DCHECK(x) (CHECK(x))
+    #define DCHECK(x) (VCHECK(x))
 
     #define DCHECK_EQ(a, b) CHECK_EQ(a, b)
     #define DCHECK_NE(a, b) CHECK_NE(a, b)
@@ -76,4 +77,4 @@
     #define DCHECK_LE(a, b) (void)0
 #endif
 
-#endif // __CHECK_H__
+#endif

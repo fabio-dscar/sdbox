@@ -1,5 +1,5 @@
-#ifndef __THREAD_H__
-#define __THREAD_H__
+#ifndef SDBOX_THREAD_H
+#define SDBOX_THREAD_H
 
 #include <sdbox.h>
 
@@ -61,4 +61,4 @@ private:
 
 } // namespace sdbox
 
-#endif // __THREAD_H__
+#endif
